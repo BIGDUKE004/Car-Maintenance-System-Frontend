@@ -1,0 +1,64 @@
+/* Admin console + password pages. Matches the blue-grey app theme in styles.css. */
+.forgot-row{margin:-6px 0 14px;text-align:right;font-size:11px}
+.forgot-row a{color:var(--blue);font-weight:700}
+.muted-copy{font-size:12px;line-height:1.7;color:#52667c;margin:0 0 14px}
+.lookup-form{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+.lookup-form .field-label{flex:1;min-width:220px;margin-bottom:0}
+.lookup-form .button{height:41px}
+.admin-review-card{display:flex;flex-direction:column;color:inherit;transition:transform .18s}
+.admin-review-card:hover{transform:translateY(-2px)}
+.recent-row{display:flex;align-items:center;gap:8px}
+.recent-row .activity-row{flex:1;min-width:0}
+.recent-row .activity-info small{word-break:break-all}
+
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tab{border:1px solid #c5d2e1;background:#edf2f8;color:#33475c;font-size:11px;font-weight:700;padding:9px 13px;text-transform:capitalize;border-radius:4px}
+.tab-active{background:var(--navy);border-color:var(--navy);color:#fff}
+.tab-help{font-size:12px;color:#52667c;line-height:1.6;max-width:720px;margin:0 0 16px}
+
+.table-scroll{overflow-x:auto}
+.data-table{width:100%;border-collapse:collapse;font-size:12px;color:#20364d}
+.data-table th{text-align:left;font-size:9px;letter-spacing:1.2px;color:#5e748d;padding:0 12px 10px 0;white-space:nowrap}
+.data-table td{padding:13px 12px 13px 0;border-top:1px solid #d3deea;vertical-align:middle}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:10px;word-break:break-all}
+
+.workflow{list-style:none;display:flex;margin:4px 0 22px;padding:0;gap:6px;overflow-x:auto}
+.workflow-step{flex:1;min-width:92px;display:flex;flex-direction:column;align-items:center;gap:8px;font-size:9px;letter-spacing:.6px;text-transform:uppercase;font-weight:700;color:#7d8fa3;text-align:center;position:relative}
+.workflow-step::before{content:"";position:absolute;top:13px;left:-50%;width:100%;height:2px;background:#c5d2e1;z-index:0}
+.workflow-step:first-child::before{display:none}
+.workflow-dot{position:relative;z-index:1;width:27px;height:27px;border-radius:50%;display:grid;place-items:center;background:#dce6f1;border:2px solid #c5d2e1;font-size:11px;color:#5e748d}
+.workflow-done,.workflow-current{color:#20364d}
+.workflow-done::before,.workflow-current::before{background:var(--blue)}
+.workflow-done .workflow-dot{background:var(--blue);border-color:var(--blue);color:#fff}
+.workflow-current .workflow-dot{background:#fff;border-color:var(--blue);color:var(--blue)}
+
+.action-bar{display:flex;gap:10px;flex-wrap:wrap;padding-top:16px;border-top:1px solid #d3deea}
+.danger-button{margin-left:auto;color:#b33c46;border-color:#e3b9bd}
+.danger-button:hover{border-color:#b33c46}
+.inline-form{display:flex;gap:12px;align-items:flex-end;margin-top:18px;flex-wrap:wrap}
+.inline-form .field-label{margin-bottom:0;flex:1;min-width:170px}
+.inline-form .field-label span{display:inline-flex;align-items:center;gap:6px}
+.pill-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.pill-row .status-pill{margin-top:0}
+
+.check-label{display:flex;gap:10px;align-items:flex-start;font-size:12px;color:#263c53;line-height:1.5;margin-bottom:12px}
+.check-label input{margin-top:2px}
+.verify-result{display:flex;gap:8px;align-items:center;margin-top:14px;padding:11px 12px;font-size:12px;font-weight:700}
+.verify-ok{background:#e3f6ed;color:#1b8156}
+.verify-bad{background:#ffebec;color:#b33c46}
+.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-top:16px}
+.photo-grid figure{margin:0}
+.photo-grid img{width:100%;aspect-ratio:4/3;object-fit:cover;background:#dce6f1;display:block}
+.photo-grid figcaption{font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:#5e748d;margin-top:5px}
+
+.status-needs_review{background:#fff4dc;color:#97691b}
+.status-paid{background:#e3f6ed;color:#1b8156}
+.status-partially_paid{background:#fff4dc;color:#97691b}
+.status-unpaid{background:#edf1f4;color:#64717c}
+
+@media(max-width:800px){
+  .workflow{flex-direction:column;gap:12px}
+  .workflow-step{flex-direction:row;justify-content:flex-start;text-align:left}
+  .workflow-step::before{display:none}
+  .danger-button{margin-left:0}
+}

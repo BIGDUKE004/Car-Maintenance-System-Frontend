@@ -1,11 +1,23 @@
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
-import { signedOut } from '../app/store';
-import { ArrowLeft, CarFront, ClipboardList, LayoutDashboard, LogOut, Wrench, Menu, CircleUserRound } from 'lucide-react';
-import { useState } from 'react';
+import { CarFront, CircleUserRound, ClipboardList, LayoutDashboard } from 'lucide-react';
+import Shell from './Shell';
+
+const nav = {
+  label: 'WORKSPACE',
+  items: [
+    { to: '/app', end: true, icon: LayoutDashboard, text: 'Overview' },
+    { to: '/app/vehicles', icon: CarFront, text: 'My vehicles' },
+    { to: '/app/requests', icon: ClipboardList, text: 'Maintenance' },
+  ],
+};
+
 export default function DashboardLayout() {
-  const dispatch = useDispatch(); const navigate = useNavigate(); const [mobileOpen, setMobileOpen] = useState(false);
-  const logout = () => { dispatch(signedOut()); navigate('/'); };
-  const nav = <><div className="sidebar-section-label">WORKSPACE</div><NavLink end to="/app" onClick={() => setMobileOpen(false)}><LayoutDashboard size={18}/> Overview</NavLink><NavLink to="/app/vehicles" onClick={() => setMobileOpen(false)}><CarFront size={18}/> My vehicles</NavLink><NavLink to="/app/requests" onClick={() => setMobileOpen(false)}><ClipboardList size={18}/> Maintenance</NavLink><div className="sidebar-bottom"><div className="help-card"><div className="help-icon"><Wrench size={17}/></div><strong>Keep moving.</strong><p>Your maintenance history, all in one place.</p></div><button className="sidebar-logout" onClick={logout}><LogOut size={17}/> Sign out</button><Link className="back-home" to="/"><ArrowLeft size={14}/> Back to website</Link></div></>;
-  return <div className="app-shell"><aside className={`sidebar ${mobileOpen ? 'sidebar-open' : ''}`}><Link to="/" className="brand sidebar-brand"><span className="brand-mark"><Wrench size={18}/></span><span>motora<span className="brand-dot">.</span></span></Link>{nav}</aside>{mobileOpen && <button aria-label="Close navigation" className="mobile-scrim" onClick={() => setMobileOpen(false)}/>}<div className="app-main"><header className="app-topbar"><button className="icon-button mobile-menu" aria-label="Open navigation" onClick={() => setMobileOpen(!mobileOpen)}><Menu size={20}/></button><div className="crumb"><span>Workspace</span><span className="crumb-slash">/</span><strong>Customer portal</strong></div><div className="account-chip"><span className="account-avatar"><CircleUserRound size={19}/></span><span>My account</span></div></header><main className="app-content"><Outlet/></main></div></div>;
+  return (
+    <Shell
+      nav={nav}
+      crumb={{ area: 'Workspace', page: 'Customer portal' }}
+      account="My account"
+      AccountIcon={CircleUserRound}
+      tip={{ title: 'Keep moving.', body: 'Your maintenance history, all in one place.' }}
+    />
+  );
 }

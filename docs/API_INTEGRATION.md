@@ -1,33 +1,64 @@
 # API integration map
 
-Source checked: `KennySmart1234/car_maintenance_system` `main` branch files `main.py`, `app/routers/auth_router.py`, `customer_router.py`, `maintenance_request_router.py`, `payment_router.py`, `app/schemas/user_schema.py`, `car_schema.py`, `maintenance_request_schema.py`, `payment_schema.py`, and `app/services/paystack_payment_service.py`.
+Source: `KennySmart1234/car_maintenance_system` @ `b87aadb` ("Added Reset password end point"). Every route in `main.py`'s routers is listed below.
 
-| Capability | API call | Authentication | UI consumer |
-|---|---|---|---|
-| Register | `POST /auth/register` | Public | `/register` |
-| Login | `POST /auth/login` | Public | `/login` |
-| Email verification | `GET /auth/verify-email?token=...` | Public | `/verify-email` |
-| List registered cars | `GET /customer/cars` | Bearer token | Dashboard, Vehicles, Requests |
-| Add car | `POST /customer/cars` | Bearer token | Vehicles form |
-| Change car color | `PATCH /customer/cars/{car_id}/color` | Bearer token | Vehicles card |
-| Create request | `POST /customer/maintenance-requests` | Bearer token | Requests form |
-| Car maintenance history | `GET /customer/cars/{car_id}/maintenance-history` | Bearer token | Dashboard and Requests |
-| Request details | `GET /maintenance-requests/{request_id}` | Bearer token | Request Details |
-| Cancel request | `PATCH /maintenance-requests/{request_id}/cancel` | Bearer token | Requests list |
-| List request services | `GET /customer/maintenance-services/{request_id}` | Bearer token | Request Details |
-| Approve additional service | `PATCH /customer/maintenance-services/{service_id}/approve` | Bearer token | Request Details |
-| Total cost / balance | `GET /maintenance-requests/{request_id}/total-cost`, `/balance` | Bearer token | Request Details |
-| Initialize Paystack | `POST /payments/paystack/initialize` | Bearer token | Request Details payment action |
-| Verify Paystack transaction | `GET /payments/paystack/callback?reference=...` | Public; backend verifies with Paystack | Payment result route |
+Roles: the login JWT carries `role` (`CUSTOMER` or `WORKSHOP_ADMIN`). The frontend reads it only to pick the right area (`/app` vs `/admin`); the backend enforces permissions.
 
-FastAPI validation errors are translated by the shared Axios error helper. The backend uses `{detail: ...}` for application exceptions, while validation failures may return a list of field errors.
+## Auth (public)
 
-## Not implemented because no matching customer endpoint was found
+| Endpoint | UI |
+|---|---|
+| `POST /auth/register` | `/register` |
+| `POST /auth/login` (rate limited: 5 tries / 15 min) | `/login` → redirects by role |
+| `GET /auth/verify-email?token=` | `/verify-email` (auto-runs from the emailed link) |
+| `POST /auth/forgot-password` | `/forgot-password` |
+| `POST /auth/reset-password` `{token,new_password}` | `/reset-password?token=` (emailed link) |
 
-- Global public service catalog.
-- Dedicated all-requests endpoint.
-- Customer payment history endpoint.
-- Vehicle deletion/editing beyond the existing color update endpoint.
-- Frontend redirect from the backend Paystack callback JSON response to `/payments/result`.
+## Customer (`/app`, Bearer token)
 
-These are documented dependencies, not mocked features.
+| Endpoint | UI |
+|---|---|
+| `GET/POST /customer/cars` | Vehicles, Dashboard |
+| `PATCH /customer/cars/{id}/color` | Vehicles |
+| `POST /customer/maintenance-requests` | Maintenance → New request |
+| `GET /customer/cars/{id}/maintenance-history` | Dashboard, Maintenance, per-service payment status on Request details |
+| `GET /maintenance-requests/{id}` | Request details |
+| `PATCH /maintenance-requests/{id}/cancel` | Maintenance |
+| `GET /customer/maintenance-services/{request_id}` | Request details |
+| `PATCH /customer/maintenance-services/{id}/approve` | Request details |
+| `GET /maintenance-requests/{id}/total-cost`, `/balance` | Request details |
+| `POST /payments/paystack/initialize` | Request details → Pay |
+| `GET /payments/paystack/callback?reference=` | `/payments/result` |
+| `POST /payments/paystack/webhook` | Server-to-server from Paystack. No UI. |
+
+## Workshop admin (`/admin`, `require_admin`)
+
+| Endpoint | UI |
+|---|---|
+| `PATCH /admin/maintenance-requests/{id}/accept` | Request → workflow |
+| `PATCH /admin/maintenance-requests/{id}/inspect` | Request → workflow |
+| `PATCH /maintenance-requests/{id}/status` `{status}` | Request → workflow (start work, awaiting approval, complete) |
+| `PATCH /maintenance-requests/{id}/next-service-date` `{next_service_date}` | Request → details |
+| `POST /admin/maintenance-services` | Request → Add service (standard or additional) |
+| `GET /admin/verify-vehicle/{car_id}?plate_number=&vin=` | Request → Verify the vehicle |
+| `POST /admin/maintenance-images` | Request → Photos |
+| `POST /payments/` | Request → Record payment (cash / card / transfer) |
+| `GET /admin/payment-transactions?status=` | Payment review |
+| `PATCH /admin/payment-transactions/{reference}/resolve` | Payment review |
+| `POST /admin/admins` | Workshop tools → Add admin |
+| `POST /admin/email-notifications/retry-failed` | Workshop tools |
+
+Admins also pass the ownership checks on the shared read endpoints (request, services, total cost, balance, cancel, car history), which is how the request page loads.
+
+`PATCH /admin/maintenance-requests/{id}/status` and `/admin/.../next-service-date` duplicate the two `/maintenance-requests/...` routes above (query params instead of a JSON body). The UI uses the JSON-body versions.
+
+Status transitions are enforced by the backend: `PENDING → ACCEPTED → INSPECTING → (AWAITING_APPROVAL) → IN_PROGRESS → COMPLETED`. Adding an *additional* service during `INSPECTING` moves the request to `AWAITING_APPROVAL` automatically and emails the customer.
+
+## Not possible with the current API
+
+See `docs/BACKEND_NOTES.md` for details and suggested fixes.
+
+- Listing all requests (admin) or all requests (customer) in one call. The customer UI aggregates per-car history; the admin UI opens requests by ID and remembers recent ones on the device.
+- Rejecting an additional service (customer or admin).
+- Reading back uploaded photos.
+- Redirecting the browser from Paystack to `/payments/result` (needs a one-line backend change).
