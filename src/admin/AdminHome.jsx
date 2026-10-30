@@ -11,6 +11,8 @@ import { dateTime, label, pillClass } from '../lib/format';
 
 const REFRESH_MS = 20000;
 const ACTIVE = ['ACCEPTED', 'INSPECTING', 'AWAITING_APPROVAL', 'IN_PROGRESS'];
+const customerOf = (r) => r?.customer && typeof r.customer === 'object' ? r.customer : {};
+const carOf = (r) => r?.car && typeof r.car === 'object' ? r.car : {};
 const TABS = [
   { key: 'PENDING', text: 'New', match: (r) => r.status === 'PENDING' },
   { key: 'ACTIVE', text: 'In progress', match: (r) => ACTIVE.includes(r.status) },
@@ -39,7 +41,11 @@ export default function AdminHome() {
       const list = Array.isArray(data) ? data : [];
       if (knownIds.current) {
         list.filter((r) => !knownIds.current.has(r.id) && r.status === 'PENDING')
-          .forEach((r) => toast.info(`New request from ${r.customer.name} · ${r.car.make} ${r.car.model}`));
+          .forEach((r) => {
+            const customer = customerOf(r);
+            const car = carOf(r);
+            toast.info(`New request from ${customer.name || 'a customer'} · ${[car.make, car.model].filter(Boolean).join(' ') || 'vehicle details unavailable'}`);
+          });
       }
       knownIds.current = new Set(list.map((r) => r.id));
       setRows(list); setError(''); setUpdatedAt(new Date());
@@ -67,20 +73,25 @@ export default function AdminHome() {
   const visible = useMemo(() => {
     const tabDef = TABS.find((t) => t.key === tab);
     const q = query.trim().toLowerCase();
-    return rows.filter(tabDef.match).filter((r) => !q || [r.customer.name, r.customer.phone, r.car.plate_number, r.car.make, r.car.model, r.description].join(' ').toLowerCase().includes(q));
+    return rows.filter(tabDef.match).filter((r) => {
+      const customer = customerOf(r);
+      const car = carOf(r);
+      return !q || [customer.name, customer.phone, car.plate_number, car.make, car.model, r.description].filter(Boolean).join(' ').toLowerCase().includes(q);
+    });
   }, [rows, tab, query]);
 
   const accept = async (row) => {
     setAccepting(row.id);
-    try { await adminApi.acceptRequest(row.id); toast.success(`Accepted ${row.customer.name}’s request.`); }
+    try { await adminApi.acceptRequest(row.id); toast.success(`Accepted ${customerOf(row).name || 'customer'}’s request.`); }
     catch (e) { toast.error(readableError(e)); }   // e.g. "already accepted by <admin>"
     finally { setAccepting(''); load(true); }
   };
 
   const handledBy = (r) => {
     if (!r.accepted_by) return r.status === 'PENDING' ? <span className="unclaimed">Unclaimed</span> : <span className="muted-copy">—</span>;
-    const mine = r.accepted_by.id === myId;
-    return <span className="handler"><strong>{mine ? 'You' : r.accepted_by.name}</strong><small>{dateTime(r.accepted_at)}</small></span>;
+    const acceptedBy = r.accepted_by && typeof r.accepted_by === 'object' ? r.accepted_by : {};
+    const mine = acceptedBy.id === myId;
+    return <span className="handler"><strong>{mine ? 'You' : acceptedBy.name || 'Another admin'}</strong><small>{dateTime(r.accepted_at)}</small></span>;
   };
 
   return (
@@ -113,9 +124,9 @@ export default function AdminHome() {
               <thead><tr><th>Vehicle</th><th>Customer</th><th>Issue</th><th>Requested</th><th>Status</th><th>Handled by</th><th /></tr></thead>
               <tbody>{visible.map((r) => (
                 <tr key={r.id} className={r.status === 'PENDING' ? 'row-new' : ''}>
-                  <td><strong>{r.car.year} {r.car.make} {r.car.model}</strong><small className="cell-sub">{r.car.plate_number}</small></td>
-                  <td><strong>{r.customer.name}</strong><small className="cell-sub">{r.customer.phone}</small></td>
-                  <td className="cell-issue">{r.description}</td>
+                  <td><strong>{[carOf(r).year, carOf(r).make, carOf(r).model].filter(Boolean).join(' ') || 'Vehicle details unavailable'}</strong><small className="cell-sub">{carOf(r).plate_number || 'Plate unavailable'}</small></td>
+                  <td><strong>{customerOf(r).name || 'Customer details unavailable'}</strong><small className="cell-sub">{customerOf(r).phone || 'Phone unavailable'}</small></td>
+                  <td className="cell-issue">{r.description || 'No description provided'}</td>
                   <td>{dateTime(r.request_date)}</td>
                   <td><span className={pillClass(r.status)}>{label(r.status)}</span></td>
                   <td>{handledBy(r)}</td>
