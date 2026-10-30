@@ -3,7 +3,7 @@
 A responsive React + Vite app for the `KennySmart1234/car_maintenance_system` FastAPI backend. It has two areas, chosen automatically from the `role` in the login token:
 
 - **Customer portal** (`/app`): vehicles, maintenance requests, additional-service approval, Paystack payments.
-- **Workshop admin console** (`/admin`): accept/inspect/progress requests, add standard or additional services, verify vehicles, record cash/card/transfer payments, review Paystack transactions, add admins, retry failed emails.
+- **Workshop admin console** (`/admin`): a live dashboard of every customer's requests (shared by all admins, shows who accepted each one; needs the backend patch in `docs/`), accept/inspect/progress requests, add standard or additional services, verify vehicles, record cash/card/transfer payments, review Paystack transactions, add admins, retry failed emails.
 
 Also: email verification, forgot/reset password.
 
@@ -47,6 +47,7 @@ The backend allows `http://localhost:5173`, `http://127.0.0.1:5173` and `https:/
 
 - `FRONTEND_BASE_URL` must be this app's origin: the verification and password-reset emails link to `/verify-email?token=` and `/reset-password?token=`.
 - Paystack return URL: see `docs/BACKEND_NOTES.md` #1.
+- **Admin request list:** apply `docs/backend-admin-dashboard.patch` to the backend and deploy it first; without it the admin dashboard shows a "backend update needed" message.
 
 ## Endpoints and known gaps
 

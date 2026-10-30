@@ -12,15 +12,23 @@ callback_url=f"{settings.frontend_base_url}/payments/result",
 ## 2. `POST /admin/admins` returns the new user's password hash
 The route has no `response_model`, so the full `User` row (including the bcrypt hash) is returned. Add `response_model=UserResponse` (already defined in `user_schema.py`). The frontend ignores the response body.
 
-## 3. No way for admins to discover requests
-There is no list endpoint, so a new customer request never shows up for the workshop. Suggested:
+## 3. Admins couldn't see customer requests (FIXED by `docs/backend-admin-dashboard.patch`)
+**Why it didn't work:** the API had no endpoint that lists requests, only `GET /maintenance-requests/{id}`, and `maintenance_requests` had no column recording who accepted a request. So the admin UI could only ask for an ID, and could not show "accepted by".
 
-```python
-@router.get("/maintenance-requests")
-def list_requests(status: MaintenanceStatus | None = None, session: Session = Depends(get_session)):
-    ...  # return requests (optionally by status), newest first
+**The patch** (6 files in the backend, applies cleanly to `b87aadb`):
+- `GET /admin/maintenance-requests?status=&limit=&offset=` returns every customer's requests, newest first, each with `car`, `customer` and `accepted_by`.
+- `GET /admin/maintenance-requests/{id}` returns the same enriched shape for one request.
+- `PATCH /admin/maintenance-requests/{id}/accept` now records `accepted_by_id` / `accepted_at`. If another admin already accepted it, the response says who ("This request was already accepted by Ada Admin.").
+- The model gains `accepted_by_id` and `accepted_at`. `create_all()` never adds columns to existing tables, so `create_db_and_tables()` now also runs two idempotent `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` statements on PostgreSQL at startup. If you prefer to migrate by hand, run them yourself first:
+
+```sql
+ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS accepted_by_id UUID REFERENCES users(id);
+ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS accepted_at TIMESTAMPTZ;
 ```
-Once it exists, the admin home page can list pending requests instead of asking for an ID.
+
+Apply with `git apply docs/backend-admin-dashboard.patch` from the backend repo root, then redeploy. Deploy the backend **before** the frontend.
+
+Not changed on purpose: accepting only *records* the owner. Any admin can still progress any request. Say if you want other admins locked out of a request someone else accepted.
 
 ## 4. Additional services cannot be rejected
 `ApprovalStatus.REJECTED` exists and the email says "approve or reject", but only `PATCH .../approve` exists. Add a `/reject` route and the UI will gain a button.

@@ -1,74 +1,136 @@
-import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Banknote, Search, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { ArrowRight, Banknote, Check, RefreshCw, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { adminApi } from '../api/adminApi';
 import { readableError } from '../api/axios';
 import { PageTitle } from '../pages/Dashboard';
-import { forgetRequest, getRecent } from '../lib/recent';
-import { dateTime, isUuid, pillClass, label } from '../lib/format';
+import { decodeToken } from '../lib/session';
+import { dateTime, label, pillClass } from '../lib/format';
+
+const REFRESH_MS = 20000;
+const ACTIVE = ['ACCEPTED', 'INSPECTING', 'AWAITING_APPROVAL', 'IN_PROGRESS'];
+const TABS = [
+  { key: 'PENDING', text: 'New', match: (r) => r.status === 'PENDING' },
+  { key: 'ACTIVE', text: 'In progress', match: (r) => ACTIVE.includes(r.status) },
+  { key: 'COMPLETED', text: 'Completed', match: (r) => r.status === 'COMPLETED' },
+  { key: 'CANCELED', text: 'Canceled', match: (r) => r.status === 'CANCELED' },
+  { key: 'ALL', text: 'All', match: () => true },
+];
 
 export default function AdminHome() {
-  const navigate = useNavigate();
-  const [id, setId] = useState('');
-  const [recent, setRecent] = useState(getRecent());
+  const token = useSelector((s) => s.auth.token);
+  const myId = decodeToken(token)?.sub;
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [updatedAt, setUpdatedAt] = useState(null);
+  const [tab, setTab] = useState('PENDING');
+  const [query, setQuery] = useState('');
+  const [accepting, setAccepting] = useState('');
   const [review, setReview] = useState(null);
+  const knownIds = useRef(null); // ids seen on the previous refresh, to announce new requests
+
+  const load = useCallback(async (quiet = false) => {
+    if (!quiet) setLoading(true);
+    try {
+      const { data } = await adminApi.listRequests();
+      const list = Array.isArray(data) ? data : [];
+      if (knownIds.current) {
+        list.filter((r) => !knownIds.current.has(r.id) && r.status === 'PENDING')
+          .forEach((r) => toast.info(`New request from ${r.customer.name} · ${r.car.make} ${r.car.model}`));
+      }
+      knownIds.current = new Set(list.map((r) => r.id));
+      setRows(list); setError(''); setUpdatedAt(new Date());
+    } catch (e) {
+      const notDeployed = [404, 405].includes(e.response?.status);
+      if (!quiet || !rows.length) setError(notDeployed ? 'The server doesn’t have the admin request list yet. Deploy the backend update (see docs/BACKEND_NOTES.md), then refresh.' : readableError(e));
+    } finally { setLoading(false); }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Every admin's dashboard re-reads the shared list: on a timer, when the tab regains focus.
+  useEffect(() => {
+    load();
+    const timer = setInterval(() => load(true), REFRESH_MS);
+    const onVisible = () => { if (document.visibilityState === 'visible') load(true); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', onVisible); };
+  }, [load]);
 
   useEffect(() => {
-    adminApi.transactions('NEEDS_REVIEW')
-      .then(({ data }) => setReview(Array.isArray(data) ? data.length : 0))
-      .catch((e) => { setReview(null); toast.error(readableError(e)); });
+    adminApi.transactions('NEEDS_REVIEW').then(({ data }) => setReview(Array.isArray(data) ? data.length : 0)).catch(() => setReview(null));
   }, []);
 
-  const open = (e) => {
-    e.preventDefault();
-    const value = id.trim();
-    if (!isUuid(value)) return toast.error('That doesn’t look like a request ID. Paste the full ID (it looks like 3f2b…-…).');
-    navigate(`/admin/requests/${value}`);
+  const counts = useMemo(() => Object.fromEntries(TABS.map((t) => [t.key, rows.filter(t.match).length])), [rows]);
+
+  const visible = useMemo(() => {
+    const tabDef = TABS.find((t) => t.key === tab);
+    const q = query.trim().toLowerCase();
+    return rows.filter(tabDef.match).filter((r) => !q || [r.customer.name, r.customer.phone, r.car.plate_number, r.car.make, r.car.model, r.description].join(' ').toLowerCase().includes(q));
+  }, [rows, tab, query]);
+
+  const accept = async (row) => {
+    setAccepting(row.id);
+    try { await adminApi.acceptRequest(row.id); toast.success(`Accepted ${row.customer.name}’s request.`); }
+    catch (e) { toast.error(readableError(e)); }   // e.g. "already accepted by <admin>"
+    finally { setAccepting(''); load(true); }
+  };
+
+  const handledBy = (r) => {
+    if (!r.accepted_by) return r.status === 'PENDING' ? <span className="unclaimed">Unclaimed</span> : <span className="muted-copy">—</span>;
+    const mine = r.accepted_by.id === myId;
+    return <span className="handler"><strong>{mine ? 'You' : r.accepted_by.name}</strong><small>{dateTime(r.accepted_at)}</small></span>;
   };
 
   return (
     <>
-      <PageTitle eyebrow="WORKSHOP CONSOLE" title="Requests." description="Open a customer's maintenance request to accept it, inspect, add services, record payments and track progress." />
+      <PageTitle eyebrow="WORKSHOP CONSOLE" title="Maintenance requests." description="Every customer's request appears here for all admins. Accept one to claim it; everyone sees who is handling it."
+        action={<button className="button button-outline" onClick={() => load()} disabled={loading}><RefreshCw size={15} /> Refresh</button>} />
 
-      <div className="detail-grid">
-        <section className="panel">
-          <div className="panel-heading"><div><span className="panel-kicker">FIND A REQUEST</span><h2>Open by request ID</h2></div></div>
-          <form className="lookup-form" onSubmit={open}>
-            <label className="field-label">Maintenance request ID
-              <input value={id} onChange={(e) => setId(e.target.value)} placeholder="Paste a request ID" spellCheck="false" />
-            </label>
-            <button className="button button-blue"><Search size={15} /> Open request</button>
-          </form>
-          <p className="form-hint">The workshop API can look a request up by ID but has no endpoint that lists every request yet. Requests you open are remembered below on this device.</p>
-        </section>
-
-        <Link to="/admin/payments" className="balance-card admin-review-card">
-          <span className="balance-kicker"><Banknote size={15} /> PAYMENT REVIEW</span>
-          <span className="balance-label">Online payments needing review</span>
-          <strong className="balance-amount">{review ?? '—'}</strong>
-          <div className="balance-divider" />
-          <div className="balance-line"><span>Open the review queue</span><ArrowRight size={16} /></div>
-        </Link>
+      <div className="admin-stats">
+        {TABS.slice(0, 4).map((t) => (
+          <button key={t.key} className={`admin-stat ${tab === t.key ? 'admin-stat-active' : ''}`} onClick={() => setTab(t.key)}>
+            <span>{t.text.toUpperCase()}</span><strong>{loading && !rows.length ? '–' : counts[t.key]}</strong>
+          </button>
+        ))}
+        <Link to="/admin/payments" className="admin-stat admin-stat-link"><span><Banknote size={12} /> PAYMENTS TO REVIEW</span><strong>{review ?? '–'}</strong></Link>
       </div>
 
+      {error && <div className="error-panel"><strong>Couldn’t load requests.</strong><span>{error}</span><button className="button button-outline button-small" onClick={() => load()}>Try again</button></div>}
+
       <section className="panel">
-        <div className="panel-heading"><div><span className="panel-kicker">ON THIS DEVICE</span><h2>Recently opened</h2></div></div>
-        {recent.length ? (
-          <div className="activity-list">
-            {recent.map((r) => (
-              <div className="recent-row" key={r.id}>
-                <Link className="activity-row" to={`/admin/requests/${r.id}`}>
-                  <span className="activity-info"><strong>{r.title || 'Maintenance request'}</strong><small>{r.id} · opened {dateTime(r.at)}</small></span>
-                  {r.status && <span className={pillClass(r.status)}>{label(r.status)}</span>}
-                </Link>
-                <button className="icon-button" aria-label="Remove from list" onClick={() => { forgetRequest(r.id); setRecent(getRecent()); }}><Trash2 size={15} /></button>
-              </div>
-            ))}
+        <div className="dash-toolbar">
+          <div className="tabs" role="tablist">
+            {TABS.map((t) => <button key={t.key} role="tab" aria-selected={tab === t.key} className={tab === t.key ? 'tab tab-active' : 'tab'} onClick={() => setTab(t.key)}>{t.text} <span className="tab-count">{counts[t.key]}</span></button>)}
+          </div>
+          <label className="search-box"><Search size={15} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search customer, plate or issue" /></label>
+        </div>
+
+        {loading && !rows.length ? <div className="skeleton-list"><div /><div /><div /></div> : visible.length ? (
+          <div className="table-scroll">
+            <table className="data-table request-table-admin">
+              <thead><tr><th>Vehicle</th><th>Customer</th><th>Issue</th><th>Requested</th><th>Status</th><th>Handled by</th><th /></tr></thead>
+              <tbody>{visible.map((r) => (
+                <tr key={r.id} className={r.status === 'PENDING' ? 'row-new' : ''}>
+                  <td><strong>{r.car.year} {r.car.make} {r.car.model}</strong><small className="cell-sub">{r.car.plate_number}</small></td>
+                  <td><strong>{r.customer.name}</strong><small className="cell-sub">{r.customer.phone}</small></td>
+                  <td className="cell-issue">{r.description}</td>
+                  <td>{dateTime(r.request_date)}</td>
+                  <td><span className={pillClass(r.status)}>{label(r.status)}</span></td>
+                  <td>{handledBy(r)}</td>
+                  <td className="cell-actions">
+                    {r.status === 'PENDING' && <button className="button button-blue button-small" disabled={accepting === r.id} onClick={() => accept(r)}><Check size={14} /> {accepting === r.id ? 'Accepting…' : 'Accept'}</button>}
+                    <Link className="button button-outline button-small" to={`/admin/requests/${r.id}`}>Open <ArrowRight size={14} /></Link>
+                  </td>
+                </tr>
+              ))}</tbody>
+            </table>
           </div>
         ) : (
-          <div className="empty-state compact"><strong>Nothing opened yet.</strong><p>Paste a request ID above. Customers' request IDs appear in their dashboard and in additional-service emails.</p></div>
+          <div className="empty-state compact"><strong>{rows.length ? 'No requests match.' : 'No requests yet.'}</strong><p>{rows.length ? 'Try another tab or clear the search.' : 'When a customer submits a maintenance request it will appear here for every admin.'}</p></div>
         )}
+        {updatedAt && <p className="form-hint refresh-note">Live: refreshes every {REFRESH_MS / 1000}s · last updated {updatedAt.toLocaleTimeString()}</p>}
       </section>
     </>
   );

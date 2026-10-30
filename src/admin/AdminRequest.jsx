@@ -7,7 +7,6 @@ import { customerApi, maintenanceApi } from '../api/customerApi';
 import { readableError } from '../api/axios';
 import Modal from '../components/Modal';
 import { dateOnly, dateTime, label, money, pillClass } from '../lib/format';
-import { rememberRequest } from '../lib/recent';
 
 const FLOW = ['PENDING', 'ACCEPTED', 'INSPECTING', 'AWAITING_APPROVAL', 'IN_PROGRESS', 'COMPLETED'];
 const CLOSED = ['COMPLETED', 'CANCELED'];
@@ -45,7 +44,7 @@ export default function AdminRequest() {
     try {
       // Admins pass the ownership checks on these shared endpoints.
       const [req, svc, total, balance] = await Promise.all([
-        maintenanceApi.request(id), customerApi.servicesForRequest(id), maintenanceApi.totalCost(id), maintenanceApi.balance(id),
+        adminApi.getRequest(id), customerApi.servicesForRequest(id), maintenanceApi.totalCost(id), maintenanceApi.balance(id),
       ]);
       setRequest(req.data);
       setServices(Array.isArray(svc.data) ? svc.data : []);
@@ -56,8 +55,7 @@ export default function AdminRequest() {
         const mine = rows.find((r) => r.request_id === id) || null;
         setEntry(mine);
         setOtherRequests(rows.filter((r) => r.request_id !== id));
-        rememberRequest({ id, title: mine?.car ? `${mine.car.year} ${mine.car.make} ${mine.car.model} · ${mine.car.plate_number}` : 'Maintenance request', status: req.data.status });
-      } catch { setEntry(null); setOtherRequests([]); rememberRequest({ id, title: 'Maintenance request', status: req.data.status }); }
+      } catch { setEntry(null); setOtherRequests([]); }
     } catch (e) { setError(readableError(e)); }
     finally { setLoading(false); }
   };
@@ -100,7 +98,7 @@ export default function AdminRequest() {
 
   const status = request.status;
   const closed = CLOSED.includes(status);
-  const car = entry?.car;
+  const car = request.car;
 
   return (
     <>
@@ -141,6 +139,8 @@ export default function AdminRequest() {
         <section className="panel">
           <div className="panel-heading"><div><span className="panel-kicker">REQUEST OVERVIEW</span><h2>Details</h2></div></div>
           <div className="detail-facts">
+            <div><span>Customer</span><strong>{request.customer.name}</strong><small className="cell-sub">{request.customer.phone} · {request.customer.email}</small></div>
+            <div><span>Handled by</span><strong>{request.accepted_by ? request.accepted_by.name : 'Not accepted yet'}</strong>{request.accepted_at && <small className="cell-sub">{dateTime(request.accepted_at)}</small>}</div>
             <div><span>Request ID</span><strong className="id-value">{request.id}</strong></div>
             <div><span>Requested for</span><strong>{dateTime(request.request_date)}</strong></div>
             <div><span>Submitted</span><strong>{dateTime(request.created_at)}</strong></div>

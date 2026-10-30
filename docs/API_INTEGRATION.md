@@ -35,7 +35,9 @@ Roles: the login JWT carries `role` (`CUSTOMER` or `WORKSHOP_ADMIN`). The fronte
 
 | Endpoint | UI |
 |---|---|
-| `PATCH /admin/maintenance-requests/{id}/accept` | Request → workflow |
+| `GET /admin/maintenance-requests?status=` (**needs backend patch**) | Requests dashboard: live list for every admin |
+| `GET /admin/maintenance-requests/{id}` (**needs backend patch**) | Request page: customer, car, handled-by |
+| `PATCH /admin/maintenance-requests/{id}/accept` | Dashboard "Accept" button, request page |
 | `PATCH /admin/maintenance-requests/{id}/inspect` | Request → workflow |
 | `PATCH /maintenance-requests/{id}/status` `{status}` | Request → workflow (start work, awaiting approval, complete) |
 | `PATCH /maintenance-requests/{id}/next-service-date` `{next_service_date}` | Request → details |
@@ -54,11 +56,11 @@ Admins also pass the ownership checks on the shared read endpoints (request, ser
 
 Status transitions are enforced by the backend: `PENDING → ACCEPTED → INSPECTING → (AWAITING_APPROVAL) → IN_PROGRESS → COMPLETED`. Adding an *additional* service during `INSPECTING` moves the request to `AWAITING_APPROVAL` automatically and emails the customer.
 
-## Not possible with the current API
+## Not possible with the current API (even after the patch)
 
 See `docs/BACKEND_NOTES.md` for details and suggested fixes.
 
-- Listing all requests (admin) or all requests (customer) in one call. The customer UI aggregates per-car history; the admin UI opens requests by ID and remembers recent ones on the device.
+- A customer-side "list all my requests" call. The customer UI aggregates per-car history.
 - Rejecting an additional service (customer or admin).
 - Reading back uploaded photos.
 - Redirecting the browser from Paystack to `/payments/result` (needs a one-line backend change).

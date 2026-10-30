@@ -9,6 +9,12 @@ export const adminApi = {
   verifyVehicle: (carId, plate_number, vin) =>
     api.get(`/admin/verify-vehicle/${carId}`, { params: { plate_number, vin } }),
 
+  // GET /admin/maintenance-requests?status=  -> every customer's requests, newest first,
+  // each with { car, customer, accepted_by } so the dashboard needs no extra calls.
+  listRequests: (status) => api.get('/admin/maintenance-requests', { params: status ? { status } : {} }),
+  // GET /admin/maintenance-requests/{id}  -> the same enriched shape for one request
+  getRequest: (id) => api.get(`/admin/maintenance-requests/${id}`),
+
   // Request lifecycle. The backend enforces the allowed transitions:
   // PENDING > ACCEPTED > INSPECTING > (AWAITING_APPROVAL) > IN_PROGRESS > COMPLETED
   acceptRequest: (id) => api.patch(`/admin/maintenance-requests/${id}/accept`),
