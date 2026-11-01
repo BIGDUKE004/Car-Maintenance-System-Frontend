@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api, naira, fmt, label } from "../api";
-import { Card, Err, Pill, useLoad } from "../ui";
+import { Card, Err, Head, Pill, useLoad } from "../ui";
+import { Ic } from "../icons";
 
 export function VehicleDetail() {
   const { id } = useParams();
@@ -11,7 +12,7 @@ export function VehicleDetail() {
   if (!c) return <Err e={error} />;
   return (
     <>
-      <div className="bar"><div><h1>{c.make} {c.model}</h1><p className="sub">{c.year} · {c.color}</p></div><label className="btn dark">Change photo<input hidden type="file" accept="image/*" onChange={upload} /></label></div>
+      <Head t={`${c.make} ${c.model}`} s={`${c.year} · ${c.color}`}><label className="btn dark">Change photo<input hidden type="file" accept="image/*" onChange={upload} /></label></Head>
       <Err e={err} />
       <Card className="car">{c.image_url && <img className="carimg" src={c.image_url} alt="" />}<dl><dt>Plate</dt><dd>{c.plate_number}</dd><dt>VIN</dt><dd>{c.vin}</dd></dl></Card>
       <Card title="Maintenance History">{c.requests.length ? c.requests.map((r) => (
@@ -28,7 +29,7 @@ export function Payments() {
   if (!sum) return <Err e={error} />;
   return (
     <>
-      <div className="bar"><div><h1>Payments</h1><p className="sub">Manage your transactions and outstanding balance.</p></div><div className="alert"><div><small>OUTSTANDING BALANCE</small><b>{naira(sum.outstanding_balance)}</b></div></div></div>
+      <Head t="Payments" s="Manage your transactions and outstanding balance."><div className="owing"><small>OUTSTANDING BALANCE</small><b>{naira(sum.outstanding_balance)}</b></div></Head>
       <Err e={err} />
       {sum.unpaid_services.length > 0 && <Card title="Pay for a service">{sum.unpaid_services.map((u) => (
         <div className="row" key={u.service_id}><div><b>{u.name}</b><small>Balance {naira(u.balance)}</small></div><button className="btn blue sm" onClick={() => pay(u.service_id)}>Pay Now</button></div>))}</Card>}
@@ -56,12 +57,12 @@ export function Notifications() {
   const all = async () => { await api("/customer/notifications/read-all", { method: "POST" }); reload(); window.dispatchEvent(new Event("notif")); };
   return (
     <>
-      <div className="bar"><div><h1>Notifications</h1><p className="sub">Stay updated with your vehicle maintenance progress.</p></div><button className="btn dark" onClick={all}>Mark all as read</button></div>
-      <div className="tabs">{["ALL", "UNREAD", "MAINTENANCE", "PAYMENTS", "APPROVALS"].map((t) => <button key={t} className={tab === t ? "on" : ""} onClick={() => setTab(t)}>{label(t)}</button>)}</div>
+      <Head t="Notifications" s="Stay updated with your vehicle maintenance progress."><button className="btn soft" onClick={all}>Mark all as read</button></Head>
+      <div className="tabs bar-white">{["ALL", "UNREAD", "MAINTENANCE", "PAYMENTS", "APPROVALS"].map((t) => <button key={t} className={tab === t ? "on" : ""} onClick={() => setTab(t)}>{label(t)}</button>)}</div>
       <Err e={error} />
       {(data || []).map((n) => (
-        <Card key={n.id} className={n.is_read ? "" : "unread"}><div className="row"><div><b>{n.title}</b><p>{n.message}</p><small>{fmt(n.created_at)}</small></div>
-          <div className="end">{n.maintenance_request_id && <Link className="btn dark sm" to={`/app/requests/${n.maintenance_request_id}`}>View</Link>}{!n.is_read && <button className="btn line sm dk" onClick={() => read(n.id)}>Mark as read</button>}</div></div></Card>))}
+        <Card key={n.id} className={`ncard ${n.category} ${n.is_read ? "" : "unread"}`}><div className="row"><span className="nic"><Ic n={n.category === "APPROVALS" ? "alert" : n.category === "PAYMENTS" ? "card" : "check"} s={24} /></span><div className="grow"><b>{n.title}</b><p>{n.message}</p><small>{fmt(n.created_at)}</small></div>
+          <div className="end">{n.maintenance_request_id && <Link className="btn dark sm" to={`/app/requests/${n.maintenance_request_id}`}>{n.category === "APPROVALS" ? "Review & Approve" : "View"}</Link>}{!n.is_read && <button className="btn line sm dk" onClick={() => read(n.id)}>Mark as read</button>}</div></div></Card>))}
       {data?.length === 0 && <p className="empty">You're all caught up.</p>}
     </>
   );

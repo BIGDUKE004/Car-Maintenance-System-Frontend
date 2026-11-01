@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api, auth, fmt } from "../api";
-import { Card, Err, useLoad } from "../ui";
+import { Card, Err, Head, useLoad } from "../ui";
 import { AuthPage, Field } from "./Public";
 
 export function VerifyEmail() {
@@ -41,7 +41,7 @@ export function Profile() {
   const run = (fn, ok) => async (e) => { e.preventDefault(); setErr(""); setMsg(""); try { await fn(); setMsg(ok); reload(); } catch (x) { setErr(x.message); } };
   return (
     <>
-      <h1>{auth.role === "WORKSHOP_ADMIN" ? "Settings" : "My Profile"}</h1><p className="sub">Manage your account information.</p>
+      <Head t={auth.role === "WORKSHOP_ADMIN" ? "Settings" : "My Profile"} s="Manage your account information and preferences" />
       <Err e={err} />{msg && <p className="note">{msg}</p>}
       <div className="grid2">
         <Card title="Personal Information"><form className="form" onSubmit={run(() => api("/auth/me", { method: "PATCH", body: f }), "Profile updated.")}>

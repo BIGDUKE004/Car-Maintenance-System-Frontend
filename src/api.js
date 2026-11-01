@@ -37,3 +37,5 @@ export async function api(path, { method = "GET", body, form } = {}) {
 export const naira = (n) => "₦" + Number(n || 0).toLocaleString();
 export const fmt = (d) => (d ? new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "-");
 export const label = (s) => String(s || "").replace(/_/g, " ");
+
+export const mr = (id) => "#MR-" + String(id).slice(0, 5).toUpperCase();

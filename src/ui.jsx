@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link, NavLink, Navigate, Outlet, useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
+import { Ic } from "./icons";
+import { Link, NavLink, Navigate, Outlet, useNavigate, useOutletContext } from "react-router-dom";
 import { api, auth, label } from "./api";
 
 export const Pill = ({ s }) => <span className={`pill ${s}`}>{label(s)}</span>;
@@ -19,23 +21,38 @@ export function useLoad(fn, deps = []) {
   return { data, error, reload };
 }
 
+const ICONS = { Dashboard: "home", "My Vehicles": "car", Requests: "wrench", "Maintenance Requests": "wrench", Payments: "card", Notifications: "bell", Profile: "user", Customers: "users", Vehicles: "car", "Maintenance Images": "image", Administrators: "users", Reports: "chart", Settings: "gear" };
+
+// Pages put their title (and action button) into the header bar with <Head>.
+export const Head = ({ t, s, children }) => {
+  const slot = useOutletContext();
+  return slot ? createPortal(<><div className="head-t"><h1>{t}</h1>{s && <small>{s}</small>}</div><div className="head-act">{children}</div></>, slot) : null;
+};
+
 export function Shell({ role, links }) {
   const nav = useNavigate();
   const { data: me } = useLoad(() => api("/auth/me"));
-  const [unread, setUnread] = useState(0);
-  const refresh = () => role === "CUSTOMER" && api("/customer/notifications/unread-count").then((r) => setUnread(r.unread)).catch(() => {});
+  const [unread, setUnread] = useState(0), [slot, setSlot] = useState(null);
+  const customer = role === "CUSTOMER";
+  const refresh = () => customer && api("/customer/notifications/unread-count").then((r) => setUnread(r.unread)).catch(() => {});
   useEffect(() => { refresh(); window.addEventListener("notif", refresh); return () => window.removeEventListener("notif", refresh); }, []);
   if (!auth.token) return <Navigate to="/login" replace />;
   if (auth.role !== role) return <Navigate to={auth.role === "WORKSHOP_ADMIN" ? "/admin" : "/app"} replace />;
   const name = me ? `${me.first_name} ${me.last_name}` : "";
   return (
-    <div className="shell">
+    <div className={`shell ${customer ? "cust" : "admin"}`}>
       <aside className="side">
-        <div className="logo">MOTORA<small>Drive with Confidence</small></div>
-        <nav>{links.map(([to, text, end]) => <NavLink key={to} to={to} end={end}>{text}{text === "Notifications" && unread > 0 && <em>{unread}</em>}</NavLink>)}</nav>
-        <button className="ghost" onClick={() => { auth.clear(); nav("/"); }}>Log out</button>
+        <div className="logo">MOTORA<span>.</span>{!customer && <small>Drive with Confidence</small>}</div>
+        {customer && <div className="menu-label">MENU</div>}
+        <nav>{links.map(([to, text, end]) => <NavLink key={to} to={to} end={end} className={({ isActive }) => (isActive ? "active " : "") + (text === "Requests" ? "red" : "")}><Ic n={ICONS[text] || "grid"} s={20} />{text}{text === "Notifications" && unread > 0 && <em>{unread}</em>}</NavLink>)}</nav>
+        <button className="ghost" onClick={() => { auth.clear(); nav("/"); }}><Ic n="user" s={20} /> Log out</button>
       </aside>
-      <main className="main"><div className="top">{role === "WORKSHOP_ADMIN" && <AdminSearch />}<span>{name}</span><span className="avatar">{name[0]}</span></div><Outlet /></main>
+      <main className="main">
+        <div className="top"><div className="head-slot" ref={setSlot} />{!customer && <AdminSearch />}
+          {customer && <Link to="/app/notifications" className="bell"><Ic n="bell" s={22} />{unread > 0 && <em>{unread}</em>}</Link>}
+          <div className="who"><b>{name}</b><small>{customer ? "Premium Member" : "Administrator"}</small></div><span className="avatar">{name[0]}</span></div>
+        <Outlet context={slot} />
+      </main>
     </div>
   );
 }

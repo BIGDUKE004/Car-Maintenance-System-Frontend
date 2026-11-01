@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, naira, fmt, label } from "../api";
 import { Card, Err, Pill, useLoad } from "../ui";
+import { Ic } from "../icons";
 
 const FLOW = ["PENDING", "ACCEPTED", "INSPECTING", "IN_PROGRESS", "COMPLETED"];
 const CATS = ["BEFORE", "DAMAGE_PART", "REMOVED_PART", "REPLACEMENT_PART", "AFTER"];
@@ -13,15 +14,15 @@ export function AHome() {
   if (!d) return <Err e={error} />;
   const s = d.statistics.by_status, done = s.COMPLETED || 0, total = d.statistics.total_requests;
   const addAdmin = async (e) => { e.preventDefault(); setMsg(""); try { await api("/admin/admins", { method: "POST", body: f }); setMsg("Administrator added."); setOpen(false); } catch (x) { setMsg(x.message); } };
-  const stat = (t, n, to) => <Link to={to} className="card stat"><span>{t}</span><b>{n}</b></Link>;
+  const stat = (t, n, to, ic, c) => <Link to={to} className="card stat"><i className={`sic ${c}`}><Ic n={ic} s={28} /></i><div><span>{t}</span><b>{n}</b></div></Link>;
   return (
     <>
-      <h1>Welcome back, Admin 👋</h1><p className="sub">Here's what's happening with your workshop today.</p>
+      <div className="bar"><div><h1>Welcome back, Admin 👋</h1><p className="sub">Here's what's happening with your workshop today.</p></div><span className="datechip">{new Date().toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}</span></div>
       <div className="grid4">
-        {stat("Pending Requests", s.PENDING || 0, "/admin/requests")}{stat("In Progress", s.IN_PROGRESS || 0, "/admin/requests")}
-        {stat("Awaiting Approval", d.awaiting_customer_approval.count, "/admin/requests")}{stat("Completed", done, "/admin/requests")}
+        {stat("Pending Requests", s.PENDING || 0, "/admin/requests", "wrench", "b")}{stat("In Progress", s.IN_PROGRESS || 0, "/admin/requests", "check", "g")}
+        {stat("Awaiting Approval", d.awaiting_customer_approval.count, "/admin/requests", "clock", "o")}{stat("Completed", done, "/admin/requests", "shield", "p")}
       </div>
-      <div className="banner"><small>MOTORA AUTO SERVICE</small><h2>Keep Your Vehicle in Top Condition</h2><p>Professional. Reliable. Always Moving Forward.</p><Link to="/admin/requests" className="btn light">View Maintenance Requests →</Link></div>
+      <div className="banner" style={{ backgroundImage: "linear-gradient(90deg,#071a3d 38%,#071a3d00),url(/banner.jpg)" }}><small>MOTORA AUTO SERVICE</small><h2>Keep Your Vehicle in Top Condition</h2><p>Professional. Reliable. Always Moving Forward.</p><Link to="/admin/requests" className="btn light">View Maintenance Requests →</Link></div>
       <div className="grid-main">
         <Card title="Recent Maintenance Requests" action={<Link to="/admin/requests">View All →</Link>}>
           <table><thead><tr><th>Customer</th><th>Vehicle</th><th>Description</th><th>Status</th><th>Date</th><th /></tr></thead>
@@ -31,6 +32,7 @@ export function AHome() {
           <Card title="Quick Actions">
             <Link to="/admin/requests" className="btn dark wide">View All Requests</Link>
             <button className="btn line wide dk" onClick={() => setOpen(!open)}>Add Administrator</button>
+            <Link to="/admin/images" className="btn line wide dk">Upload Image</Link>
             {open && <form className="form" onSubmit={addAdmin}>{Object.keys(f).map((k) => <input key={k} required placeholder={label(k)} type={k === "password" ? "password" : "text"} value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} />)}<button className="btn blue">Save</button></form>}
             {msg && <p className="note">{msg}</p>}
           </Card>
