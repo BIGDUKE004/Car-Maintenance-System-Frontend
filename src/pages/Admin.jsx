@@ -1,0 +1,106 @@
+import { useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { api, naira, fmt, label } from "../api";
+import { Card, Err, Pill, useLoad } from "../ui";
+
+const FLOW = ["PENDING", "ACCEPTED", "INSPECTING", "IN_PROGRESS", "COMPLETED"];
+const CATS = ["BEFORE", "DAMAGE_PART", "REMOVED_PART", "REPLACEMENT_PART", "AFTER"];
+
+export function AHome() {
+  const { data: d, error } = useLoad(() => api("/admin/dashboard"));
+  const { data: reqs } = useLoad(() => api("/admin/maintenance-requests"));
+  const [open, setOpen] = useState(false), [f, setF] = useState({ first_name: "", last_name: "", email: "", phone: "", password: "" }), [msg, setMsg] = useState("");
+  if (!d) return <Err e={error} />;
+  const s = d.statistics.by_status, done = s.COMPLETED || 0, total = d.statistics.total_requests;
+  const addAdmin = async (e) => { e.preventDefault(); setMsg(""); try { await api("/admin/admins", { method: "POST", body: f }); setMsg("Administrator added."); setOpen(false); } catch (x) { setMsg(x.message); } };
+  const stat = (t, n, to) => <Link to={to} className="card stat"><span>{t}</span><b>{n}</b></Link>;
+  return (
+    <>
+      <h1>Welcome back, Admin 👋</h1><p className="sub">Here's what's happening with your workshop today.</p>
+      <div className="grid4">
+        {stat("Pending Requests", s.PENDING || 0, "/admin/requests")}{stat("In Progress", s.IN_PROGRESS || 0, "/admin/requests")}
+        {stat("Awaiting Approval", d.awaiting_customer_approval.count, "/admin/requests")}{stat("Completed", done, "/admin/requests")}
+      </div>
+      <div className="banner"><small>MOTORA AUTO SERVICE</small><h2>Keep Your Vehicle in Top Condition</h2><p>Professional. Reliable. Always Moving Forward.</p><Link to="/admin/requests" className="btn light">View Maintenance Requests →</Link></div>
+      <div className="grid-main">
+        <Card title="Recent Maintenance Requests" action={<Link to="/admin/requests">View All →</Link>}>
+          <table><thead><tr><th>Customer</th><th>Vehicle</th><th>Description</th><th>Status</th><th>Date</th><th /></tr></thead>
+            <tbody>{(reqs || []).slice(0, 5).map((r) => <tr key={r.id}><td>{r.customer.first_name} {r.customer.last_name}</td><td>{r.vehicle.make} {r.vehicle.model}<small>{r.vehicle.plate_number}</small></td><td>{r.description.slice(0, 40)}</td><td><Pill s={r.status} /></td><td>{fmt(r.request_date)}</td><td><Link className="btn dark sm" to={`/admin/requests/${r.id}`}>View</Link></td></tr>)}</tbody></table>
+        </Card>
+        <div>
+          <Card title="Quick Actions">
+            <Link to="/admin/requests" className="btn dark wide">View All Requests</Link>
+            <button className="btn line wide dk" onClick={() => setOpen(!open)}>Add Administrator</button>
+            {open && <form className="form" onSubmit={addAdmin}>{Object.keys(f).map((k) => <input key={k} required placeholder={label(k)} type={k === "password" ? "password" : "text"} value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} />)}<button className="btn blue">Save</button></form>}
+            {msg && <p className="note">{msg}</p>}
+          </Card>
+          <Card title="Notifications">
+            <p className="dotline"><i className="red" />{d.payments_needing_review.count} payment(s) require review</p>
+            <p className="dotline"><i className="blue" />{d.awaiting_customer_approval.count} request(s) awaiting customer</p>
+            <p className="dotline"><i className="red" />{d.notification_problems.failed_count} email(s) failed to send</p>
+          </Card>
+        </div>
+      </div>
+      <div className="grid2">
+        <Card title="Maintenance Status Overview"><div className="steps">{FLOW.map((k) => <div key={k} className="done"><i />{label(k)}<b>{s[k] || 0}</b></div>)}</div></Card>
+        <Card title="Quick Info"><div className="grid2"><div><small>Total Requests</small><h2>{total}</h2></div><div><small>Completion Rate</small><h2>{total ? Math.round((done / total) * 100) : 0}%</h2></div></div></Card>
+      </div>
+    </>
+  );
+}
+
+export function ARequests() {
+  const [tab, setTab] = useState("ALL");
+  const { data, error } = useLoad(() => api("/admin/maintenance-requests" + (tab === "ALL" ? "" : `?status=${tab}`)), [tab]);
+  return (
+    <>
+      <h1>Maintenance Requests</h1>
+      <div className="tabs">{["ALL", ...FLOW.slice(0, 2), "INSPECTING", "AWAITING_APPROVAL", "IN_PROGRESS", "COMPLETED"].filter((v, i, a) => a.indexOf(v) === i).map((t) => <button key={t} className={tab === t ? "on" : ""} onClick={() => setTab(t)}>{label(t)}</button>)}</div>
+      <Err e={error} />
+      <Card><table><thead><tr><th>Customer</th><th>Vehicle</th><th>Description</th><th>Status</th><th>Date</th><th /></tr></thead>
+        <tbody>{(data || []).map((r) => <tr key={r.id}><td>{r.customer.first_name} {r.customer.last_name}<small>{r.customer.phone}</small></td><td>{r.vehicle.make} {r.vehicle.model}<small>{r.vehicle.plate_number}</small></td><td>{r.description.slice(0, 50)}</td><td><Pill s={r.status} /></td><td>{fmt(r.request_date)}</td><td><Link className="btn dark sm" to={`/admin/requests/${r.id}`}>View</Link></td></tr>)}</tbody></table>
+        {data?.length === 0 && <p className="empty">No requests.</p>}</Card>
+    </>
+  );
+}
+
+export function ARequestDetail() {
+  const { id } = useParams();
+  const { data: r, error, reload } = useLoad(() => api(`/admin/maintenance-requests/${id}`), [id]);
+  const [err, setErr] = useState(""), [notes, setNotes] = useState(""), [svc, setSvc] = useState({ name: "", description: "", cost: "", is_additional: false }), [cat, setCat] = useState("BEFORE"), [date, setDate] = useState("");
+  const run = (fn) => async (e) => { e?.preventDefault(); setErr(""); try { await fn(); reload(); } catch (x) { setErr(x.message); } };
+  const move = (p, opt) => run(() => api(`/admin/maintenance-requests/${id}/${p}`, { method: "PATCH", ...opt }));
+  if (!r) return <Err e={error} />;
+  const NEXT = { PENDING: ["Accept Request", move("accept")], ACCEPTED: ["Start Inspection", move("inspect", { body: { notes: notes || null } })], INSPECTING: ["Start Work", move("status?status=IN_PROGRESS")], AWAITING_APPROVAL: ["Start Work", move("status?status=IN_PROGRESS")], IN_PROGRESS: ["Mark Completed", move("status?status=COMPLETED")] }[r.status];
+  const upload = run(async () => { const f = new FormData(); f.append("maintenance_request_id", id); f.append("category", cat); f.append("file", document.getElementById("file").files[0]); await api("/admin/maintenance-images/upload", { method: "POST", form: f }); });
+  return (
+    <>
+      <div className="bar"><div><h1>Request Details</h1><p className="sub">{r.description}</p></div><Pill s={r.status} /></div>
+      <Err e={err} />
+      <div className="grid2">
+        <Card title="Customer"><b>{r.customer.first_name} {r.customer.last_name}</b><small>{r.customer.email} · {r.customer.phone}</small></Card>
+        <Card title="Vehicle"><b>{r.vehicle.year} {r.vehicle.make} {r.vehicle.model} ({r.vehicle.color})</b><small>Plate {r.vehicle.plate_number} · VIN {r.vehicle.vin}</small></Card>
+      </div>
+      {NEXT && <Card title="Next step">
+        {r.status === "ACCEPTED" && <textarea placeholder="Inspection notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} />}
+        <button className="btn blue" onClick={NEXT[1]}>{NEXT[0]}</button>
+        {r.status === "AWAITING_APPROVAL" && r.approvals.pending > 0 && <small> Waiting for the customer to answer {r.approvals.pending} service(s).</small>}
+      </Card>}
+      {r.inspection_notes && <Card title="Inspection notes"><p>{r.inspection_notes}</p></Card>}
+      <Card title={`Services - total ${naira(r.total_cost)}, paid ${naira(r.total_paid)}`}>
+        {r.services.map((s) => <div className="row" key={s.id}><div><b>{s.name}{s.is_additional && " (additional)"}</b><small>{s.description}</small></div><div className="end"><b>{naira(s.cost)}</b>{s.is_additional && <Pill s={s.approval} />}</div></div>)}
+        {!["COMPLETED", "CANCELED"].includes(r.status) && <form className="inline" onSubmit={run(() => api("/admin/maintenance-services", { method: "POST", body: { ...svc, cost: svc.cost, maintenance_request_id: id } }).then(() => setSvc({ name: "", description: "", cost: "", is_additional: false })))}>
+          <input required placeholder="Service name" value={svc.name} onChange={(e) => setSvc({ ...svc, name: e.target.value })} />
+          <input required placeholder="Description" value={svc.description} onChange={(e) => setSvc({ ...svc, description: e.target.value })} />
+          <input required type="number" min="1" placeholder="Cost (₦)" value={svc.cost} onChange={(e) => setSvc({ ...svc, cost: e.target.value })} />
+          <label><input type="checkbox" checked={svc.is_additional} onChange={(e) => setSvc({ ...svc, is_additional: e.target.checked })} /> Additional</label>
+          <button className="btn dark sm">Add</button></form>}
+      </Card>
+      <Card title="Photos">
+        <div className="photos">{r.images.map((i) => <figure key={i.id}><img src={i.image_url} alt="" /><figcaption>{label(i.category)}</figcaption></figure>)}</div>
+        <form className="inline" onSubmit={upload}><select value={cat} onChange={(e) => setCat(e.target.value)}>{CATS.map((c) => <option key={c} value={c}>{label(c)}</option>)}</select><input id="file" type="file" accept="image/*" required /><button className="btn dark sm">Upload</button></form>
+      </Card>
+      <Card title="Next service date"><form className="inline" onSubmit={move(`next-service-date?next_service_date=${date}`)}><input type="date" required value={date} onChange={(e) => setDate(e.target.value)} /><button className="btn dark sm">Save</button><small>{r.next_service_date ? `Current: ${fmt(r.next_service_date)}` : ""}</small></form></Card>
+    </>
+  );
+}
