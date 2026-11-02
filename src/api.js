@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+const BASE = import.meta.env.VITE_API_URL || "https://dashboard.render.com/web/srv-db7mtd6q1p3s73d291r0";
 
 export const auth = {
   get token() { return localStorage.getItem("motora_token"); },
