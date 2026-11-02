@@ -24,18 +24,51 @@ const ReqRow = ({ r }) => (
 
 export function CHome() {
   const { data, error } = useLoad(loadAll);
+  const { data: sum } = useLoad(() => api("/customer/payments/summary"));
+  const { data: notes } = useLoad(() => api("/customer/notifications?limit=4"));
   if (!data) return <Err e={error} />;
-  const live = data.requests.find((r) => !["COMPLETED", "CANCELED"].includes(r.status));
+  const { cars, requests } = data;
+  const open = requests.filter((r) => !["COMPLETED", "CANCELED"].includes(r.status));
+  const live = open[0];
+  const awaiting = requests.reduce((n, r) => n + r.pending_approval_count, 0);
+  const due = requests.filter((r) => r.next_service_date).sort((a, b) => a.next_service_date.localeCompare(b.next_service_date));
   return (
     <>
       <Head t="Dashboard" s="Welcome back" />
+      <div className="kpis">
+        <Card className="kpi"><small>MY VEHICLES</small><b>{cars.length}</b></Card>
+        <Card className="kpi"><small>ACTIVE REQUESTS</small><b>{open.length}</b></Card>
+        <Card className="kpi"><small>AWAITING MY APPROVAL</small><b>{awaiting}</b></Card>
+        <Card className="kpi red"><small>OUTSTANDING BALANCE</small><b>{naira(sum?.outstanding_balance)}</b></Card>
+      </div>
+      {awaiting > 0 && <div className="alert"><div><h3>Action needed</h3><p>You have {awaiting} additional service(s) waiting for your approval.</p></div><Link to="/app/requests" className="btn blue">Review now</Link></div>}
       <div className="grid2">
-        <Card title="My Vehicles" action={<Link to="/app/vehicles">View all →</Link>}>
-          {data.cars.length ? data.cars.slice(0, 3).map((c) => <div className="row" key={c.id}><div><b>{c.year} {c.make} {c.model}</b><small>{c.plate_number} · {c.color}</small></div></div>) : <p className="empty">No vehicles yet. <Link to="/app/vehicles">Add one</Link></p>}
-        </Card>
         <Card title="Current Request" action={<Link to="/app/requests">All requests →</Link>}>
-          {live ? <><ReqRow r={live} /><Timeline status={live.status} /></> : <p className="empty">Nothing in progress.</p>}
+          {live ? <><ReqRow r={live} /><Timeline status={live.status} /><div className="row"><span>Total cost</span><b>{naira(live.total_cost)}</b></div><div className="row"><span>Balance</span><b>{naira(live.balance)}</b></div></> : <p className="empty">Nothing in progress. <Link to="/app/requests">Book a service</Link></p>}
         </Card>
+        <Card title="Payment Summary" action={<Link to="/app/payments">Payments →</Link>}>
+          <div className="row"><span>Total billed</span><b>{naira(sum?.total_billed)}</b></div><div className="row"><span>Total paid</span><b>{naira(sum?.total_paid)}</b></div><div className="row"><span>Outstanding</span><b className="redt">{naira(sum?.outstanding_balance)}</b></div>
+          {sum?.unpaid_services.slice(0, 3).map((u) => <div className="mini" key={u.service_id}><span className="dot"><Ic n="card" s={16} /></span><div><b>{u.name}</b><small>Balance {naira(u.balance)}</small></div></div>)}
+        </Card>
+      </div>
+      <div className="grid-3">
+        <Card title="My Vehicles" action={<Link to="/app/vehicles">View all →</Link>}>
+          {cars.length ? cars.slice(0, 4).map((c) => <Link to={`/app/vehicles/${c.id}`} className="mini" key={c.id}><span className="dot"><Ic n="car" s={16} /></span><div><b>{c.year} {c.make} {c.model}</b><small>{c.plate_number} · {c.color}</small></div></Link>) : <p className="empty">No vehicles yet. <Link to="/app/vehicles">Add one</Link></p>}
+        </Card>
+        <Card title="Recent Requests" action={<Link to="/app/requests">View all →</Link>}>
+          {requests.slice(0, 4).map((r) => <Link to={`/app/requests/${r.id}`} className="mini" key={r.id}><span className="dot"><Ic n="wrench" s={16} /></span><div><b>{r.description}</b><small>{fmt(r.request_date)} · {label(r.status)}</small></div></Link>)}
+          {requests.length === 0 && <p className="empty">No requests yet.</p>}
+        </Card>
+        <Card title="Notifications" action={<Link to="/app/notifications">View all →</Link>}>
+          {(notes || []).map((n) => <div className="mini" key={n.id}><span className="dot"><Ic n="bell" s={16} /></span><div><b>{n.title}</b><small>{fmt(n.created_at)}{!n.is_read && " · new"}</small></div></div>)}
+          {notes?.length === 0 && <p className="empty">You're all caught up.</p>}
+        </Card>
+      </div>
+      <div className="grid2">
+        <Card title="Upcoming Services">
+          {due.length ? due.slice(0, 4).map((r) => <div className="mini" key={r.id}><span className="dot"><Ic n="clock" s={16} /></span><div><b>{r.car.make} {r.car.model} · {r.car.plate_number}</b><small>Next service {fmt(r.next_service_date)}</small></div></div>) : <p className="empty">Your next service dates will show here once a job is completed.</p>}
+        </Card>
+        <div className="tip"><h3>Need your car looked at?</h3><p>Describe the problem and our team will review it, quote any extra work for your approval, and keep you updated at every stage.</p><Link to="/app/requests" className="btn blue">+ New Request</Link></div>
       </div>
     </>
   );

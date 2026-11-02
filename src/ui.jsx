@@ -44,8 +44,8 @@ export function Shell({ role, links }) {
       <aside className="side">
         <div className="logo">MOTORA<span>.</span>{!customer && <small>Drive with Confidence</small>}</div>
         {customer && <div className="menu-label">MENU</div>}
-        <nav>{links.map(([to, text, end]) => <NavLink key={to} to={to} end={end} className={({ isActive }) => (isActive ? "active " : "") + (text === "Requests" ? "red" : "")}><Ic n={ICONS[text] || "grid"} s={20} />{text}{text === "Notifications" && unread > 0 && <em>{unread}</em>}</NavLink>)}</nav>
-        <button className="ghost" onClick={() => { auth.clear(); nav("/"); }}><Ic n="user" s={20} /> Log out</button>
+        <nav>{links.map(([to, text, end]) => <NavLink key={to} to={to} end={end} className={({ isActive }) => (isActive ? "active " : "") + (text === "Requests" ? "red" : "")}><Ic n={ICONS[text] || "grid"} s={17} />{text}{text === "Notifications" && unread > 0 && <em>{unread}</em>}</NavLink>)}</nav>
+        <button className="ghost" onClick={() => { auth.clear(); nav("/"); }}><Ic n="user" s={17} /> Log out</button>
       </aside>
       <main className="main">
         <div className="top"><div className="head-slot" ref={setSlot} />{!customer && <AdminSearch />}

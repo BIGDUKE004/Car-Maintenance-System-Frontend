@@ -10,6 +10,7 @@ const CATS = ["BEFORE", "DAMAGE_PART", "REMOVED_PART", "REPLACEMENT_PART", "AFTE
 export function AHome() {
   const { data: d, error } = useLoad(() => api("/admin/dashboard"));
   const { data: reqs } = useLoad(() => api("/admin/maintenance-requests"));
+  const { data: rep } = useLoad(() => api("/admin/reports?days=180"));
   const [open, setOpen] = useState(false), [f, setF] = useState({ first_name: "", last_name: "", email: "", phone: "", password: "" }), [msg, setMsg] = useState("");
   if (!d) return <Err e={error} />;
   const s = d.statistics.by_status, done = s.COMPLETED || 0, total = d.statistics.total_requests;
@@ -42,6 +43,30 @@ export function AHome() {
             <p className="dotline"><i className="red" />{d.notification_problems.failed_count} email(s) failed to send</p>
           </Card>
         </div>
+      </div>
+      <div className="grid-3">
+        <Card title="Awaiting Customer Approval" action={<Link to="/admin/requests">View →</Link>}>
+          {d.awaiting_customer_approval.items.map((x) => <Link to={`/admin/requests/${x.id}`} className="mini" key={x.id}><span className="dot"><Ic n="clock" s={16} /></span><div><b>{x.customer_name} · {x.plate_number}</b><small>{x.pending_approval_count} service(s) pending</small></div></Link>)}
+          {d.awaiting_customer_approval.items.length === 0 && <p className="empty">Nothing waiting on customers.</p>}
+        </Card>
+        <Card title="Payments Requiring Review" action={<Link to="/admin/payments">View →</Link>}>
+          {d.payments_needing_review.items.map((t) => <div className="mini" key={t.reference}><span className="dot"><Ic n="card" s={16} /></span><div><b>{t.reference}</b><small>{naira(t.amount)} · {fmt(t.created_at)}</small></div></div>)}
+          {d.payments_needing_review.items.length === 0 && <p className="empty">No payments need review.</p>}
+        </Card>
+        <Card title="Recent Activity">
+          {d.recent_activity.slice(0, 5).map((a) => <Link to={`/admin/requests/${a.request_id}`} className="mini" key={a.request_id}><span className="dot"><Ic n="wrench" s={16} /></span><div><b>{a.customer_name} · {a.plate_number}</b><small>{label(a.status)} · {fmt(a.occurred_at)}</small></div></Link>)}
+          {d.recent_activity.length === 0 && <p className="empty">No activity yet.</p>}
+        </Card>
+      </div>
+      <div className="grid2">
+        <Card title="Revenue by Month" action={<Link to="/admin/reports">Reports →</Link>}>
+          {rep?.revenue_by_month.map((m) => <div key={m.month} className="bar-row"><span>{m.month}</span><i style={{ width: `${(Number(m.revenue) / Math.max(1, ...rep.revenue_by_month.map((x) => Number(x.revenue)))) * 100}%` }} /><b>{naira(m.revenue)}</b></div>)}
+          {rep?.revenue_by_month.length === 0 && <p className="empty">No payments recorded yet.</p>}
+        </Card>
+        <Card title="Top Services">
+          {rep?.top_services.map((t) => <div className="row" key={t.name}><div><b>{t.name}</b><small>{t.count} job(s)</small></div><b>{naira(t.revenue)}</b></div>)}
+          {rep?.top_services.length === 0 && <p className="empty">No services yet.</p>}
+        </Card>
       </div>
       <div className="grid2">
         <Card title="Maintenance Status Overview"><div className="steps">{FLOW.map((k) => <div key={k} className="done"><i />{label(k)}<b>{s[k] || 0}</b></div>)}</div></Card>
