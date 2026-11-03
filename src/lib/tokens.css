@@ -1,0 +1,7 @@
+:root {
+  --ink-950: #05080f; --ink-900: #0B1220; --ink-800: #111a2e; --ink-700: #18233c;
+  --surface-900: #0e1729; --surface-800: #142036; --surface-700: #1b2a44;
+  --cyan: #38E1FF; --cyan-400: #5ae8ff; --cyan-600: #0fb8d4;
+  --teal: #2dd4bf; --slate-300: #c2ccdc; --slate-400: #94a3b8;
+  --amber: #f5a524; --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
