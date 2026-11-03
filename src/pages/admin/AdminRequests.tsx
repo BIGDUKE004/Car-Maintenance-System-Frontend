@@ -3,15 +3,17 @@ import { api } from '@/services/api'
 import { Skeleton } from '@/components/ds/Skeleton'
 import { Link } from 'react-router-dom'
 import { date } from '@/lib/format'
+import { useState } from 'react'
 
 export default function AdminRequests() {
-  const { data: requests, isLoading } = useQuery({ queryKey: ['admin-requests'], queryFn: () => api.adminRequests() })
+  const [status,setStatus] = useState('')
+  const { data: requests, isLoading, error } = useQuery({ queryKey: ['admin-requests',status], queryFn: () => api.adminRequests(status || undefined) })
   
   if (isLoading) return <Skeleton className="h-96" />
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-end border-b border-white/10 pb-6">
+      <div className="flex flex-wrap justify-between items-end gap-4 border-b border-white/10 pb-6">
         <div>
           <h1 className="text-4xl font-serif text-white mb-2">Work Queue</h1>
           <p className="text-stone-400">Manage all incoming and active maintenance requests.</p>

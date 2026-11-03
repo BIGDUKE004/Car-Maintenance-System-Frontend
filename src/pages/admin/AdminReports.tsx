@@ -1,63 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/services/api'
 import { Skeleton } from '@/components/ds/Skeleton'
-import { ngn } from '@/lib/format'
 import { Button } from '@/components/ds/Button'
 
 export default function AdminReports() {
-  const { data: report, isLoading } = useQuery({ queryKey: ['admin-reports'], queryFn: () => api.adminReports() })
-  if (isLoading) return <Skeleton className="h-96" />
-
-  return (
-    <div className="space-y-10">
-      <div className="flex justify-between items-end border-b border-white/10 pb-6">
-        <div>
-          <h1 className="text-4xl font-serif text-white mb-2">Financial Reports</h1>
-          <p className="text-stone-400">Last {report?.period_days || 180} days overview</p>
-        </div>
-        <Button className="bg-transparent border-stone-700">Export CSV</Button>
-      </div>
-
-      <div className="grid grid-cols-3 gap-6">
-        <div className="bg-stone-900 border border-white/5 p-6 rounded-xl">
-          <div className="text-xs text-stone-500 uppercase tracking-widest mb-2">Total Revenue</div>
-          <div className="text-3xl font-mono text-brand">{ngn(report?.total_revenue || 0)}</div>
-        </div>
-        <div className="bg-stone-900 border border-white/5 p-6 rounded-xl">
-          <div className="text-xs text-stone-500 uppercase tracking-widest mb-2">Requests Created</div>
-          <div className="text-3xl font-mono text-white">{report?.requests_created}</div>
-        </div>
-        <div className="bg-stone-900 border border-white/5 p-6 rounded-xl">
-          <div className="text-xs text-stone-500 uppercase tracking-widest mb-2">Top Service</div>
-          <div className="text-xl text-white truncate">{report?.top_services[0]?.name || 'N/A'}</div>
-          <div className="text-xs text-stone-400 mt-1">{report?.top_services[0]?.count} bookings</div>
-        </div>
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-8">
-        <div className="bg-stone-900 border border-white/5 p-6 rounded-xl">
-          <h3 className="text-lg font-serif text-white mb-6">Revenue By Month</h3>
-          <div className="space-y-4">
-            {report?.revenue_by_month.map(m => (
-              <div key={m.month} className="flex justify-between items-center">
-                <span className="text-stone-400 font-mono text-sm">{m.month}</span>
-                <span className="text-white font-mono">{ngn(m.revenue)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="bg-stone-900 border border-white/5 p-6 rounded-xl">
-          <h3 className="text-lg font-serif text-white mb-6">Requests By Status</h3>
-          <div className="space-y-4">
-            {Object.entries(report?.requests_by_status || {}).map(([status, count]) => (
-              <div key={status} className="flex justify-between items-center">
-                <span className="text-stone-400 uppercase text-xs tracking-wider">{status}</span>
-                <span className="text-white font-mono">{count as number}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+ const {data:requests=[],isLoading}=useQuery({queryKey:['admin-requests'],queryFn:()=>api.adminRequests()})
+ if(isLoading)return <Skeleton className="h-96"/>
+ const counts=requests.reduce<Record<string,number>>((a,r)=>(a[r.status]=(a[r.status]||0)+1,a),{})
+ const exportCsv=()=>{const rows=[['Request ID','Date','Status','Customer','Vehicle','Plate'],...requests.map(r=>[r.id,r.request_date,r.status,`${r.customer.first_name} ${r.customer.last_name}`,`${r.vehicle.year} ${r.vehicle.make} ${r.vehicle.model}`,r.vehicle.plate_number])];const csv=rows.map(row=>row.map(v=>`"${String(v??'').replaceAll('"','""')}"`).join(',')).join('\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));const a=document.createElement('a');a.href=url;a.download='motora-maintenance-report.csv';a.click();URL.revokeObjectURL(url)}
+ return <div className="space-y-8"><header className="flex flex-wrap items-end justify-between gap-4 border-b border-white/10 pb-6"><div><h1 className="text-4xl font-serif text-white">Workshop Reports</h1><p className="mt-2 text-sm text-stone-500">Operational report based on maintenance requests returned by the backend.</p></div><Button onClick={exportCsv} className="bg-transparent border-stone-700">Export requests CSV</Button></header><div className="grid gap-4 sm:grid-cols-2"><div className="rounded-xl border border-white/10 bg-stone-900 p-6"><p className="text-xs uppercase tracking-widest text-stone-500">Total requests</p><p className="mt-3 font-mono text-4xl text-white">{requests.length}</p></div><div className="rounded-xl border border-white/10 bg-stone-900 p-6"><p className="text-xs uppercase tracking-widest text-stone-500">Completed</p><p className="mt-3 font-mono text-4xl text-brand">{counts.COMPLETED||0}</p></div></div><section className="rounded-xl border border-white/10 bg-stone-900 p-6"><h2 className="text-xl font-serif text-white">Requests by status</h2><div className="mt-5 space-y-4">{Object.entries(counts).map(([status,count])=><div key={status} className="flex items-center justify-between border-b border-white/5 pb-3"><span className="text-sm uppercase tracking-wider text-stone-400">{status.replaceAll('_',' ')}</span><span className="font-mono text-white">{count}</span></div>)}{!requests.length&&<p className="text-sm text-stone-500">No report data yet.</p>}</div></section></div>
 }

@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ds/Skeleton'
 import { useState } from 'react'
 
 export default function Payments() {
-  const { data: summary, isLoading } = useQuery({ queryKey: ['payment-summary'], queryFn: api.paymentSummary })
+  const { data: summary, isLoading } = useQuery({ queryKey: ['payment-summary'], queryFn: api.paymentOverview })
   const [loadingId, setLoadingId] = useState<string | null>(null)
 
   const payService = async (serviceId: string) => {

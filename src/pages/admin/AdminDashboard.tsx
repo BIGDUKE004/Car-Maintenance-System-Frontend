@@ -1,117 +1,29 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/services/api'
-import { Skeleton } from '@/components/ds/Skeleton'
-import { ngn, date, dateTime } from '@/lib/format'
 import { Link } from 'react-router-dom'
-import { Icon } from '@/components/ds/Icon'
+import { Skeleton } from '@/components/ds/Skeleton'
 import { Button } from '@/components/ds/Button'
+import { ngn } from '@/lib/format'
 
 export default function AdminDashboard() {
-  const { data, isLoading } = useQuery({ queryKey: ['admin-dash'], queryFn: api.adminDashboard })
-  
-  if (isLoading) return <div className="space-y-8"><Skeleton className="h-64" /><Skeleton className="h-96" /></div>
-  if (!data) return null
-
-  return (
-    <div className="space-y-12">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-white/10 pb-8 gap-6">
-        <div>
-          <div className="text-brand text-sm font-bold uppercase tracking-widest mb-2 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-brand animate-pulse" /> Live Workshop
-          </div>
-          <h1 className="text-5xl font-serif text-white mb-2">Command Center</h1>
-          <p className="text-stone-400 text-lg">Manage active jobs, approvals, and revenue.</p>
-        </div>
-        <div className="flex gap-4">
-          <Link to="/admin/reports"><Button className="bg-transparent border-stone-700">Export Report</Button></Link>
-          <Link to="/admin/requests"><Button>New Request</Button></Link>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-stone-900 border border-white/5 p-6">
-          <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Total Revenue</div>
-          <div className="text-3xl font-mono text-white mb-2">{ngn(data.statistics.total_revenue)}</div>
-          <div className="text-xs text-stone-400 flex items-center gap-1"><span className="text-brand font-bold">↑ {data.statistics.completed_last_30_days}</span> jobs completed</div>
-        </div>
-        <div className="bg-stone-900 border border-white/5 p-6">
-          <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Active Requests</div>
-          <div className="text-3xl font-mono text-white mb-2">{data.statistics.total_requests}</div>
-          <div className="text-xs text-stone-400 flex items-center gap-1"><span className="text-stone-300 font-bold">↑ {data.statistics.created_last_30_days}</span> new this month</div>
-        </div>
-        <Link to="/admin/requests" className="bg-stone-900 border border-brand/30 hover:border-brand p-6 group transition-colors block">
-          <div className="text-xs font-bold text-brand uppercase tracking-wider mb-2">Awaiting Approval</div>
-          <div className="text-3xl font-mono text-white mb-2">{data.awaiting_customer_approval.count}</div>
-          <div className="text-xs text-stone-400">Clients need to approve</div>
-        </Link>
-        <div className="bg-stone-900 border border-white/5 p-6">
-          <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">System Alerts</div>
-          <div className="space-y-2 mt-4">
-            <div className="flex justify-between items-center text-sm"><span className="text-stone-400">Failed emails</span><span className={`font-mono ${data.notification_problems.failed_count > 0 ? 'text-brand font-bold' : 'text-stone-500'}`}>{data.notification_problems.failed_count}</span></div>
-            <div className="flex justify-between items-center text-sm"><span className="text-stone-400">Payment review</span><span className={`font-mono ${data.payments_needing_review.count > 0 ? 'text-brand font-bold' : 'text-stone-500'}`}>{data.payments_needing_review.count}</span></div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid lg:grid-cols-3 gap-10">
-        <div className="lg:col-span-2 space-y-8">
-          <div className="flex justify-between items-end">
-            <h2 className="text-2xl font-serif text-white">Work Queue</h2>
-            <Link to="/admin/requests" className="text-xs font-bold text-brand uppercase tracking-wider border-b border-brand pb-1 hover:text-white hover:border-white transition-colors">View All</Link>
-          </div>
-          <div className="bg-stone-900 border border-white/5 overflow-hidden">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-white/5 text-xs text-stone-500 uppercase tracking-wider">
-                  <th className="p-4 font-medium">Customer & Vehicle</th>
-                  <th className="p-4 font-medium">Status</th>
-                  <th className="p-4 font-medium text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {data.pending_work.items.slice(0, 5).map(item => (
-                  <tr key={item.id} className="hover:bg-white/[0.02] transition-colors group">
-                    <td className="p-4">
-                      <div className="font-medium text-white text-sm">{item.customer_name}</div>
-                      <div className="text-xs text-stone-400 mt-1 flex items-center gap-2">
-                        <span className="font-mono text-brand border border-brand/20 bg-brand-light px-1.5 py-0.5">{item.plate_number}</span>{item.vehicle}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <span className={`px-2 py-1 text-[10px] font-bold uppercase tracking-wider border ${item.status === 'PENDING' ? 'border-stone-500 text-stone-300' : 'border-brand/50 text-brand'}`}>{item.status.replace('_', ' ')}</span>
-                    </td>
-                    <td className="p-4 text-right">
-                      <Link to={`/admin/requests/${item.id}`} className="inline-block border border-stone-700 text-stone-300 hover:bg-brand hover:border-brand hover:text-white px-4 py-1.5 text-xs font-bold uppercase tracking-wider transition-all">Review</Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <div className="space-y-10">
-          <div>
-            <h2 className="text-2xl font-serif text-white mb-6">Quick Actions</h2>
-            <div className="space-y-3">
-              <Link to="/admin/requests" className="w-full flex items-center justify-between p-4 bg-stone-900 border border-white/5 hover:border-brand transition-colors group"><span className="text-sm font-medium text-white group-hover:text-brand">View All Requests</span><Icon name="arrow-right" className="w-4 h-4 text-stone-500 group-hover:text-brand" /></Link>
-              <Link to="/admin/customers" className="w-full flex items-center justify-between p-4 bg-stone-900 border border-white/5 hover:border-brand transition-colors group"><span className="text-sm font-medium text-white group-hover:text-brand">Customer Directory</span><Icon name="users" className="w-4 h-4 text-stone-500 group-hover:text-brand" /></Link>
-              <Link to="/admin/payments" className="w-full flex items-center justify-between p-4 bg-stone-900 border border-white/5 hover:border-brand transition-colors group"><span className="text-sm font-medium text-white group-hover:text-brand">Payment Ledger</span><Icon name="shield" className="w-4 h-4 text-stone-500 group-hover:text-brand" /></Link>
-            </div>
-          </div>
-          <div>
-            <h2 className="text-2xl font-serif text-white mb-6">Recent Activity</h2>
-            <div className="bg-stone-900 border border-white/5 p-6 space-y-6">
-              {data.recent_activity.slice(0, 4).map((activity, i) => (
-                <div key={i} className="flex gap-4 relative">
-                  {i !== 3 && <div className="absolute left-[11px] top-6 bottom-[-24px] w-px bg-white/10" />}
-                  <div className={`w-6 h-6 border-2 border-stone-900 flex items-center justify-center shrink-0 z-10 ${activity.status === 'COMPLETED' ? 'bg-brand' : 'bg-stone-700'}`}>{activity.status === 'COMPLETED' && <Icon name="check" className="w-3 h-3 text-white" />}</div>
-                  <div><div className="text-sm font-medium text-white mb-1">{activity.description}</div><div className="text-xs text-stone-400">{activity.customer_name}</div><div className="text-[10px] text-stone-600 font-mono uppercase mt-1">{dateTime(activity.occurred_at)}</div></div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+  const {data:requests=[],isLoading,error}=useQuery({queryKey:['admin-requests'],queryFn:()=>api.adminRequests()})
+  const {data:payments=[]}=useQuery({queryKey:['admin-payments','NEEDS_REVIEW'],queryFn:()=>api.adminPayments()})
+  if(isLoading)return <Skeleton className="h-96"/>
+  const count=(s:string)=>requests.filter(r=>r.status===s).length
+  const pending=requests.filter(r=>['PENDING','ACCEPTED','INSPECTING','IN_PROGRESS','AWAITING_APPROVAL'].includes(r.status))
+  const customers=new Set(requests.map(r=>r.customer.id)).size
+  if(error)return <p className="rounded-xl border border-red-500/30 bg-red-500/10 p-5 text-red-200">Could not load workshop requests. Check the API connection and admin access.</p>
+  return <div className="space-y-9">
+    <header className="flex flex-wrap items-end justify-between gap-4 border-b border-white/10 pb-7"><div><p className="mb-2 text-xs font-bold uppercase tracking-[.2em] text-brand">Workshop overview</p><h1 className="text-5xl font-serif text-white">Command Center</h1><p className="mt-2 text-stone-400">Live operational data from your maintenance request records.</p></div><Link to="/admin/requests"><Button>Open work queue</Button></Link></header>
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {[['All requests',requests.length],['Active work',pending.length],['Awaiting approval',count('AWAITING_APPROVAL')],['Customers seen',customers]].map(([label,value])=><div key={label} className="rounded-xl border border-white/10 bg-stone-900 p-6"><p className="text-xs uppercase tracking-widest text-stone-500">{label}</p><p className="mt-3 font-mono text-4xl text-white">{value}</p></div>)}
     </div>
-  )
+    <div className="grid gap-8 lg:grid-cols-[1.5fr_1fr]">
+      <section className="overflow-hidden rounded-xl border border-white/10 bg-stone-900"><div className="flex items-center justify-between border-b border-white/10 p-5"><h2 className="text-xl font-serif text-white">Recent requests</h2><Link to="/admin/requests" className="text-xs font-bold uppercase tracking-wider text-brand">View all</Link></div>
+        <div className="divide-y divide-white/5">{requests.slice(0,7).map(r=><Link key={r.id} to={`/admin/requests/${r.id}`} className="flex flex-wrap items-center justify-between gap-3 p-5 hover:bg-white/[.03]"><div><p className="font-medium text-white">{r.customer.first_name} {r.customer.last_name}</p><p className="mt-1 text-sm text-stone-500">{r.vehicle.year} {r.vehicle.make} {r.vehicle.model} · {r.vehicle.plate_number}</p></div><span className="rounded-full border border-brand/30 px-3 py-1 text-[10px] uppercase tracking-wider text-brand">{r.status.replaceAll('_',' ')}</span></Link>)}{!requests.length&&<p className="p-8 text-center text-stone-500">No maintenance requests have been submitted.</p>}</div>
+      </section>
+      <section className="space-y-5"><div className="rounded-xl border border-white/10 bg-stone-900 p-6"><h2 className="text-xl font-serif text-white">Request breakdown</h2><div className="mt-5 space-y-4">{['PENDING','ACCEPTED','INSPECTING','AWAITING_APPROVAL','IN_PROGRESS','COMPLETED','CANCELED'].map(s=><div key={s} className="flex justify-between text-sm"><span className="text-stone-400">{s.replaceAll('_',' ')}</span><span className="font-mono text-white">{count(s)}</span></div>)}</div></div>
+      <Link to="/admin/payments" className="block rounded-xl border border-brand/30 bg-stone-900 p-6 hover:border-brand"><p className="text-xs uppercase tracking-widest text-brand">Payment review</p><p className="mt-2 text-3xl font-mono text-white">{payments.length}</p><p className="mt-1 text-sm text-stone-400">Transactions needing attention</p></Link></section>
+    </div>
+  </div>
 }

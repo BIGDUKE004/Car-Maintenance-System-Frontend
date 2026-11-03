@@ -18,7 +18,8 @@ export default function Login() {
     try {
       await api.login({ email, password })
       await reloadUser()
-      nav('/dashboard')
+      const payload = JSON.parse(atob((localStorage.getItem('motora.token') || '').split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+      nav(payload.role === 'WORKSHOP_ADMIN' ? '/admin' : '/dashboard')
     } catch (e: any) { setErr(e.message || 'Login failed. Please check your credentials.') }
   }
 
@@ -54,7 +55,7 @@ export default function Login() {
             <div>
               <div className="flex justify-between mb-2">
                 <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wider">Password</label>
-                <a href="#" className="text-xs text-stone-500 hover:text-brand">Forgot?</a>
+                <Link to="/forgot-password" className="text-xs text-stone-500 hover:text-brand">Forgot password?</Link>
               </div>
               <Input type="password" value={password} onChange={e => setPassword(e.target.value)} required className="bg-stone-900 border-stone-700 h-14 rounded-none focus:ring-brand" placeholder="••••••••" />
             </div>

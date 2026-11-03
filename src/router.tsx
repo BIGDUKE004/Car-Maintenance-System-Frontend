@@ -6,12 +6,15 @@ import { AdminLayout } from '@/components/layout/AdminLayout'
 import Landing from '@/pages/public/Landing'
 import Login from '@/pages/public/Login'
 import Register from '@/pages/public/Register'
+import { ForgotPassword, ResetPassword, VerifyEmail } from '@/pages/public/AccountRecovery'
 import Dashboard from '@/pages/customer/Dashboard'
+import AddVehicle from '@/pages/customer/AddVehicle'
 import RequestService from '@/pages/customer/RequestService'
 import Payments from '@/pages/customer/Payments'
 
 import AdminDashboard from '@/pages/admin/AdminDashboard'
 import AdminRequests from '@/pages/admin/AdminRequests'
+import AdminRequestWorkbench from '@/pages/admin/AdminRequestWorkbench'
 import AdminCustomers from '@/pages/admin/AdminCustomers'
 import AdminVehicles from '@/pages/admin/AdminVehicles'
 import AdminPayments from '@/pages/admin/AdminPayments'
@@ -37,10 +40,14 @@ const router = createBrowserRouter([
   { path: '/', element: <Landing /> },
   { path: '/login', element: <Login /> },
   { path: '/register', element: <Register /> },
+  { path: '/forgot-password', element: <ForgotPassword /> },
+  { path: '/reset-password', element: <ResetPassword /> },
+  { path: '/verify-email', element: <VerifyEmail /> },
   {
     element: <CustomerRoute />,
     children: [
       { path: '/dashboard', element: <Dashboard /> },
+      { path: '/vehicles/new', element: <AddVehicle /> },
       { path: '/request-service', element: <RequestService /> },
       { path: '/payments', element: <Payments /> },
     ]
@@ -50,6 +57,7 @@ const router = createBrowserRouter([
     children: [
       { path: '/admin', element: <AdminDashboard /> },
       { path: '/admin/requests', element: <AdminRequests /> },
+      { path: '/admin/requests/:id', element: <AdminRequestWorkbench /> },
       { path: '/admin/customers', element: <AdminCustomers /> },
       { path: '/admin/vehicles', element: <AdminVehicles /> },
       { path: '/admin/payments', element: <AdminPayments /> },

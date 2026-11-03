@@ -18,12 +18,13 @@ export default function Dashboard() {
           <p className="text-stone-400 text-lg">Manage your vehicles and service history.</p>
         </div>
         <div className="flex gap-4">
+          <Link to="/vehicles/new"><Button className="bg-transparent border-stone-700"><Icon name="plus" className="w-4 h-4 mr-2 inline" /> Add Vehicle</Button></Link>
           <Link to="/payments"><Button className="bg-transparent border-stone-700"><Icon name="credit-card" className="w-4 h-4 mr-2 inline" /> Pay Balance</Button></Link>
           <Link to="/request-service"><Button className="px-6 py-4"><Icon name="wrench" className="w-4 h-4 mr-2 inline" /> Request Service</Button></Link>
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-12">
+      {(!cars || cars.length === 0) ? <div className="rounded-xl border border-dashed border-stone-700 bg-stone-900/60 p-12 text-center"><h2 className="text-2xl font-serif text-white">Your garage is empty</h2><p className="mt-2 text-stone-400">Add your first vehicle to start tracking maintenance.</p><Link to="/vehicles/new" className="mt-6 inline-block"><Button>Add your first vehicle</Button></Link></div> : <div className="grid md:grid-cols-2 gap-12">
         {cars?.map(car => {
           const requests = car.requests || [];
           const nextService = requests.length > 0 ? requests[0].next_service_date : null;
@@ -40,16 +41,16 @@ export default function Dashboard() {
                   <h3 className="text-3xl font-serif text-white mb-1">{car.year} {car.make} {car.model}</h3>
                   <div className="text-sm text-stone-500 uppercase tracking-wider">VIN: {car.vin}</div>
                 </div>
-                <Link to={`/vehicle/${car.id}`} className="text-brand text-sm font-bold uppercase tracking-wider border-b border-brand pb-1 hover:text-white hover:border-white transition-colors">Details</Link>
+                <Link to="/request-service" className="text-brand text-sm font-bold uppercase tracking-wider border-b border-brand pb-1 hover:text-white hover:border-white transition-colors">Request service</Link>
               </div>
               <div className="grid grid-cols-2 gap-8 border-t border-white/10 pt-6">
-                <div><div className="text-xs text-stone-500 uppercase tracking-wider mb-2">Next Service</div><div className="text-white font-mono text-lg">{date(nextService) || 'Not scheduled'}</div></div>
+                <div><div className="text-xs text-stone-500 uppercase tracking-wider mb-2">Next Service</div><div className="text-white font-mono text-lg">{(nextService ? date(nextService) : 'Not scheduled')}</div></div>
                 <div><div className="text-xs text-stone-500 uppercase tracking-wider mb-2">Outstanding</div><div className={`font-mono text-lg ${totalBalance > 0 ? 'text-brand' : 'text-stone-300'}`}>{ngn(totalBalance)}</div></div>
               </div>
             </div>
           )
         })}
-      </div>
+      </div>}
     </div>
   )
 }

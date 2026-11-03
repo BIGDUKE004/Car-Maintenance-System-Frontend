@@ -40,3 +40,5 @@ export interface AdminCustomerListItem { id: string; first_name: string; last_na
 export interface AdminVehicleListItem { id: string; make: string; model: string; year: number; color: string; plate_number: string; vin: string; image_url?: string | null; owner_id: string; owner_name: string }
 export interface AdminAwaitingApprovalResponse { request: AdminMaintenanceRequestResponse; pending_services: MaintenanceServiceResponse[]; approvals: { pending: number; approved: number; rejected: number } }
 export interface AdminReportResponse { period_days: number; total_revenue: string; requests_created: number; revenue_by_month: { month: string; revenue: string }[]; requests_by_status: Record<string, number>; payments_by_method: Record<string, string>; top_services: { name: string; count: number; revenue: string }[] }
+
+export interface MaintenanceRequestDetail { id:string; car_id:string; description:string; request_date:string; status:MaintenanceStatus; created_at:string; updated_at:string; completed_at?:string|null; next_service_date?:string|null }
