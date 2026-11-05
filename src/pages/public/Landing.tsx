@@ -17,13 +17,11 @@ const EXPERTISE_SERVICES = [
   },
   { 
     title: 'Brake Systems', 
-    // The exact brake caliper image you provided
-    img: brakeSystemsImage 
+    img: 'https://images.unsplash.com/photo-1696494561430-de087dd0bd69?w=500&auto=format&fit=crop'
   },
   { 
     title: 'Oil & Fluid Changes', 
-    // The exact oil service image you provided
-    img: oilFluidImage 
+    img: 'https://plus.unsplash.com/premium_photo-1661753771722-d7529901a504?w=500&auto=format&fit=crop' 
   },
   { 
     title: 'Performance Tires', 
