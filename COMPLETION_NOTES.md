@@ -36,3 +36,18 @@ The frontend does not fake these missing backend capabilities. The affected dire
 5. Deploy the `dist` directory.
 
 The original `.env` file was intentionally excluded from this delivery to avoid sharing environment secrets.
+
+## Customer service history fix
+
+- Added the missing `/history` customer route and `ServiceHistory` page. The customer sidebar already linked to `/history`, but the route/page was not registered.
+- Added `api.customerServiceHistory(carId)` for `GET /customer/cars/{car_id}/maintenance-history`.
+- The page loads the customer's vehicles, retrieves the maintenance history for each vehicle, and displays request status, services, per-service payment state, totals, and outstanding balances.
+- Added loading, API-error/retry, empty-garage, and no-service-record states.
+
+
+## Form validation and API error handling update
+
+- Registration now validates first/last name lengths, email format, phone length, and password length before sending the request. Names, email, and phone are trimmed before submission.
+- Vehicle registration now checks that make, model, color, plate number, and VIN are present, and that the year is a valid integer range before sending the request.
+- API validation arrays from FastAPI/Pydantic are converted into readable field-specific messages instead of raw JSON.
+- Backend validation and API routes were not changed. Only `src/pages/public/Register.tsx`, `src/pages/customer/AddVehicle.tsx`, and `src/services/api.ts` were changed for this update.

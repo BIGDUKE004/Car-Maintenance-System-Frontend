@@ -11,6 +11,7 @@ import Dashboard from '@/pages/customer/Dashboard'
 import AddVehicle from '@/pages/customer/AddVehicle'
 import RequestService from '@/pages/customer/RequestService'
 import Payments from '@/pages/customer/Payments'
+import ServiceHistory from '@/pages/customer/ServiceHistory'
 
 import AdminDashboard from '@/pages/admin/AdminDashboard'
 import AdminRequests from '@/pages/admin/AdminRequests'
@@ -47,6 +48,7 @@ const router = createBrowserRouter([
     element: <CustomerRoute />,
     children: [
       { path: '/dashboard', element: <Dashboard /> },
+      { path: '/history', element: <ServiceHistory /> },
       { path: '/vehicles/new', element: <AddVehicle /> },
       { path: '/request-service', element: <RequestService /> },
       { path: '/payments', element: <Payments /> },

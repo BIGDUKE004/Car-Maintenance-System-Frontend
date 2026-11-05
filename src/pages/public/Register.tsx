@@ -12,8 +12,19 @@ export default function Register() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setErr('')
+    const firstName = form.first_name.trim()
+    const lastName = form.last_name.trim()
+    const phone = form.phone.trim()
+    if (firstName.length < 2) { setErr('First name must contain at least 2 characters.'); return }
+    if (lastName.length < 2) { setErr('Last name must contain at least 2 characters.'); return }
+    if (firstName.length > 15) { setErr('First name cannot exceed 15 characters.'); return }
+    if (lastName.length > 15) { setErr('Last name cannot exceed 15 characters.'); return }
+    if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) { setErr('Enter a valid email address.'); return }
+    if (phone.length < 11 || phone.length > 14) { setErr('Phone number must contain 11 to 14 characters.'); return }
+    if (form.password.length < 10) { setErr('Password must contain at least 10 characters.'); return }
+    if (new TextEncoder().encode(form.password).length > 72) { setErr('Password is too long. Use no more than 72 bytes.'); return }
     try {
-      const res = await api.register(form)
+      const res = await api.register({ ...form, first_name: firstName, last_name: lastName, email: form.email.trim().toLowerCase(), phone })
       setMsg(res.message)
     } catch (e: any) { setErr(e.message || 'Registration failed') }
   }
@@ -53,24 +64,24 @@ export default function Register() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">First name</label>
-                <Input value={form.first_name} onChange={e => setForm({...form, first_name: e.target.value})} required className="bg-stone-900 border-stone-700 h-12 rounded-none focus:ring-brand" placeholder="John" />
+                <Input value={form.first_name} onChange={e => { setForm({...form, first_name: e.target.value}); setErr('') }} required minLength={2} maxLength={15} className="bg-stone-900 border-stone-700 h-12 rounded-none focus:ring-brand" placeholder="John" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Last name</label>
-                <Input value={form.last_name} onChange={e => setForm({...form, last_name: e.target.value})} required className="bg-stone-900 border-stone-700 h-12 rounded-none focus:ring-brand" placeholder="Doe" />
+                <Input value={form.last_name} onChange={e => { setForm({...form, last_name: e.target.value}); setErr('') }} required minLength={2} maxLength={15} className="bg-stone-900 border-stone-700 h-12 rounded-none focus:ring-brand" placeholder="Doe" />
               </div>
             </div>
             <div>
               <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Email address</label>
-              <Input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} required className="bg-stone-900 border-stone-700 h-12 rounded-none focus:ring-brand" placeholder="you@example.com" />
+              <Input type="email" value={form.email} onChange={e => { setForm({...form, email: e.target.value}); setErr('') }} required className="bg-stone-900 border-stone-700 h-12 rounded-none focus:ring-brand" placeholder="you@example.com" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Phone number</label>
-              <Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} required className="bg-stone-900 border-stone-700 h-12 rounded-none focus:ring-brand" placeholder="080 1234 5678" />
+              <Input type="tel" value={form.phone} onChange={e => { setForm({...form, phone: e.target.value}); setErr('') }} required minLength={11} maxLength={14} className="bg-stone-900 border-stone-700 h-12 rounded-none focus:ring-brand" placeholder="080 1234 5678" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Password</label>
-              <Input type="password" value={form.password} onChange={e => setForm({...form, password: e.target.value})} required minLength={10} className="bg-stone-900 border-stone-700 h-12 rounded-none focus:ring-brand" placeholder="Minimum 10 characters" />
+              <Input type="password" value={form.password} onChange={e => { setForm({...form, password: e.target.value}); setErr('') }} required minLength={10} maxLength={72} className="bg-stone-900 border-stone-700 h-12 rounded-none focus:ring-brand" placeholder="Minimum 10 characters" />
             </div>
             <Button type="submit" className="w-full h-14 text-lg mt-4 rounded-none uppercase tracking-wider text-sm font-bold">Create account</Button>
           </form>

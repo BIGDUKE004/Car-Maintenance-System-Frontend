@@ -42,3 +42,18 @@ export interface AdminAwaitingApprovalResponse { request: AdminMaintenanceReques
 export interface AdminReportResponse { period_days: number; total_revenue: string; requests_created: number; revenue_by_month: { month: string; revenue: string }[]; requests_by_status: Record<string, number>; payments_by_method: Record<string, string>; top_services: { name: string; count: number; revenue: string }[] }
 
 export interface MaintenanceRequestDetail { id:string; car_id:string; description:string; request_date:string; status:MaintenanceStatus; created_at:string; updated_at:string; completed_at?:string|null; next_service_date?:string|null }
+
+export interface CustomerMaintenanceHistory {
+  request_id: string
+  request_date: string
+  request_status: MaintenanceStatus
+  car: { car_id: string; make: string; model: string; year: number; plate_number: string }
+  services: {
+    service_id: string
+    service_name: string
+    description: string
+    cost: string | number
+    payment: { status: string; amount_paid: string | number; balance: string | number }
+  }[]
+  payment_summary: { total_cost: string | number; total_paid: string | number; outstanding_balance: string | number }
+}

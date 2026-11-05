@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ds/Button'
 import { useState, useEffect, useRef } from 'react'
+import brakeSystemsImage from '@/assets/images/brake-systems.png'
+import oilFluidImage from '@/assets/images/oil-fluid-service.jpg'
 
 const HERO_IMAGES = [
   'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?q=80&w=2070&auto=format&fit=crop',
@@ -16,12 +18,12 @@ const EXPERTISE_SERVICES = [
   { 
     title: 'Brake Systems', 
     // The exact brake caliper image you provided
-    img: 'https://images.unsplash.com/photo-1599819095905-49e98b7cc606?q=80&w=2070&auto=format&fit=crop' 
+    img: brakeSystemsImage 
   },
   { 
     title: 'Oil & Fluid Changes', 
-    // The exact red oil bottles image you provided
-    img: 'https://images.unsplash.com/photo-1632823471565-1ecdf5c6d7f9?q=80&w=2070&auto=format&fit=crop' 
+    // The exact oil service image you provided
+    img: oilFluidImage 
   },
   { 
     title: 'Performance Tires', 

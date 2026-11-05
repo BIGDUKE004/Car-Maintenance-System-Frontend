@@ -1,10 +1,47 @@
 import { API_BASE, TOKEN_KEY } from '@/lib/constants'
 import type * as T from './types'
 
+const FIELD_LABELS: Record<string, string> = {
+  first_name: 'First name', last_name: 'Last name', email: 'Email address',
+  phone: 'Phone number', password: 'Password', make: 'Make', model: 'Model',
+  year: 'Year', color: 'Color', plate_number: 'Plate number', vin: 'VIN',
+  description: 'Description', request_date: 'Request date',
+}
+
+function readableError(detail: unknown): string {
+  if (Array.isArray(detail)) {
+    const messages = detail.map((item: any) => {
+      const field = Array.isArray(item?.loc) ? String(item.loc[item.loc.length - 1] ?? '') : ''
+      const label = FIELD_LABELS[field] || (field ? field.replaceAll('_', ' ') : 'This field')
+      const type = String(item?.type || '')
+      if (type.includes('string_too_short') || type.includes('too_short')) {
+        const minimum = item?.ctx?.min_length
+        return `${label} must contain at least ${minimum ?? 1} character${minimum === 1 ? '' : 's'}.`
+      }
+      if (type.includes('string_too_long') || type.includes('too_long')) {
+        return `${label} is too long.`
+      }
+      if (type.includes('missing')) return `${label} is required.`
+      if (type.includes('email')) return 'Enter a valid email address.'
+      if (type.includes('int_parsing')) return `${label} must be a valid number.`
+      return typeof item?.msg === 'string' ? `${label}: ${item.msg.replace(/^Value error, /, '')}` : `${label} is invalid.`
+    })
+    return [...new Set(messages)].join(' ')
+  }
+  if (typeof detail === 'string') return detail
+  if (detail && typeof detail === 'object') {
+    const message = (detail as any).message
+    if (typeof message === 'string') return message
+    const nested = (detail as any).detail
+    if (nested !== undefined && nested !== detail) return readableError(nested)
+  }
+  return 'Something went wrong. Please check your details and try again.'
+}
+
 export class ApiError extends Error {
   status: number
   constructor(status: number, detail: unknown) {
-    const message = typeof detail === 'string' ? detail : (detail as any)?.message || JSON.stringify(detail)
+    const message = readableError(detail)
     super(message || `Request failed (${status})`)
     this.status = status
   }
@@ -38,6 +75,7 @@ export const api = {
   resetPassword: (token: string, new_password: string) => req<{message:string}>('/auth/reset-password', { method:'POST', body: JSON.stringify({token,new_password}) }, false),
 
   listMyCars: () => req<T.CustomerCarDetailResponse[]>('/customer/cars'),
+  customerServiceHistory: (carId: string) => req<T.CustomerMaintenanceHistory[]>(`/customer/cars/${encodeURIComponent(carId)}/maintenance-history`),
   paymentOverview: async () => {
     const cars = await req<any[]>('/customer/cars')
     const histories = await Promise.all(cars.map(car => req<any[]>(`/customer/cars/${car.id}/maintenance-history`)))
