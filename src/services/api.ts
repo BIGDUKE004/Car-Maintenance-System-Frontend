@@ -84,7 +84,30 @@ export const api = {
     const total_paid = histories.flat().reduce((sum:number,h:any)=>sum+Number(h.payment_summary?.total_paid||0),0)
     return {total_billed:String(total_billed),total_paid:String(total_paid),outstanding_balance:String(Math.max(total_billed-total_paid,0)),unpaid_services}
   },
-  addCar: (body: T.CarCreate) => req<{message:string}>('/customer/cars', { method: 'POST', body: JSON.stringify(body) }),
+addCar: (body: T.CarCreate) =>
+  req<{ message: string; car_id: string }>(
+    '/customer/cars',
+    {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }
+  ),
+  
+  uploadCarPhoto: (carId: string, file: File) => {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  return req<T.CustomerCarDetailResponse>(
+    `/customer/cars/${encodeURIComponent(carId)}/photo`,
+    {
+      method: 'POST',
+      body: formData,
+    }
+  )
+},
+
+
+
   submitRequest: (body: T.MaintenanceRequestCreate) => req<{message:string}>('/customer/maintenance-requests', { method: 'POST', body: JSON.stringify(body) }),
   requestById: (id: string) => req<T.MaintenanceRequestDetail>(`/maintenance-requests/${id}`),
   requestServices: (reqId: string) => req<T.MaintenanceServiceResponse[]>(`/customer/maintenance-services/${reqId}`),
