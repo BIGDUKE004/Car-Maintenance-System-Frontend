@@ -6,6 +6,9 @@ import { date, ngn } from '@/lib/format'
 import { Skeleton } from '@/components/ds/Skeleton'
 import { Button } from '@/components/ds/Button'
 import { Icon } from '@/components/ds/Icon'
+import { useCustomerRequestServices } from '@/hooks/usePending'
+import { pendingAdditional, displayStatus } from '@/lib/approval'
+import type { MaintenanceServiceResponse } from '@/services/types'
 
 function statusStyle(status: string) {
   switch (status) {
@@ -32,6 +35,11 @@ export default function ServiceHistory() {
     },
   })
 
+  const historyIds = (data ?? []).flatMap(v => v.history.map(h => h.request_id))
+  const { data: serviceMap } = useCustomerRequestServices(historyIds)
+  const { data: carsForDesc } = useQuery({ queryKey: ['my-cars'], queryFn: api.listMyCars })
+  const requestText = (id: string) => carsForDesc?.flatMap(c => c.requests ?? []).find(r => r.id === id)?.description
+
   if (isLoading) return <div className="space-y-6"><Skeleton className="h-24" /><Skeleton className="h-64" /><Skeleton className="h-64" /></div>
 
   if (isError) return (
@@ -54,7 +62,7 @@ export default function ServiceHistory() {
           <h1 className="font-serif text-5xl text-white">Service History</h1>
           <p className="mt-3 max-w-2xl text-stone-400">A complete record of maintenance requests, work carried out and payments for your vehicles.</p>
         </div>
-        <Link to="/request-service"><Button><Icon name="wrench" className="mr-2 inline h-4 w-4" /> Request service</Button></Link>
+        <Link to="/request-service"><Button icon="wrench">Request service</Button></Link>
       </div>
 
       {vehicles.length === 0 ? (
@@ -83,36 +91,29 @@ export default function ServiceHistory() {
             <article key={item.request_id} className="overflow-hidden rounded-xl border border-white/10 bg-stone-900">
               <div className="flex flex-col gap-4 border-b border-white/5 p-6 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-xs uppercase tracking-widest text-stone-500">{item.vehicle.plate_number} · {item.vehicle.year} {item.vehicle.make} {item.vehicle.model}</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-stone-400">{item.vehicle.plate_number} · {item.vehicle.year} {item.vehicle.make} {item.vehicle.model}</p>
                   <h2 className="mt-2 font-serif text-2xl text-white">Service request</h2>
-                  <p className="mt-1 text-sm text-stone-400">Requested {date(item.request_date)} · Ref {item.request_id.slice(0, 8).toUpperCase()}</p>
+                  <p className="mt-1 text-sm font-semibold text-stone-400">Requested {date(item.request_date)} · Ref {item.request_id.slice(0, 8).toUpperCase()}</p>
                 </div>
-                <span className={`w-fit rounded-full border px-3 py-1.5 text-xs font-semibold tracking-wide ${statusStyle(item.request_status)}`}>{item.request_status.replaceAll('_', ' ')}</span>
+                {(() => {
+                  const list = serviceMap?.[item.request_id]
+                  const pending = list ? pendingAdditional(list) : null
+                  const waiting = item.request_status === 'AWAITING_APPROVAL' && (pending == null || pending > 0)
+                  const label = item.request_status === 'AWAITING_APPROVAL'
+                    ? (pending == null ? 'AWAITING APPROVAL' : pending > 0 ? `Waiting for approval (${pending})` : 'APPROVED')
+                    : displayStatus(item.request_status, 0)
+                  const style = waiting ? 'border-amber-500 bg-amber-500/10 text-amber-300' : label === 'APPROVED' ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300' : statusStyle(item.request_status)
+                  return (
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className={`w-fit rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-wide ${style}`}>{label}</span>
+                      <Link to={`/requests/${item.request_id}`}><Button icon="eye" variant="info">View details</Button></Link>
+                    </div>
+                  )
+                })()}
               </div>
 
               <div className="grid gap-6 p-6 lg:grid-cols-[1fr_260px]">
-                <div>
-                  <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-stone-500">Work carried out</h3>
-                  {item.services.length === 0 ? (
-                    <p className="rounded-lg border border-white/5 bg-stone-950/50 p-4 text-sm text-stone-500">No services have been added to this request yet.</p>
-                  ) : (
-                    <div className="divide-y divide-white/5">
-                      {item.services.map((service) => (
-                        <div key={service.service_id} className="flex flex-col gap-2 py-4 first:pt-0 sm:flex-row sm:items-start sm:justify-between">
-                          <div className="min-w-0">
-                            <p className="font-medium text-white">{service.service_name}</p>
-                            {service.description && <p className="mt-1 text-sm leading-5 text-stone-500">{service.description}</p>}
-                            <p className="mt-2 text-xs uppercase tracking-wider text-stone-500">{service.payment.status.replaceAll('_', ' ')}</p>
-                          </div>
-                          <div className="shrink-0 text-left sm:text-right">
-                            <p className="font-mono text-white">{ngn(service.cost)}</p>
-                            <p className="mt-1 text-xs text-stone-500">Paid {ngn(service.payment.amount_paid)}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <ServiceBreakdown item={item} description={requestText(item.request_id)} services={serviceMap?.[item.request_id]} />
 
                 <aside className="h-fit rounded-lg border border-white/5 bg-stone-950/60 p-5">
                   <h3 className="text-xs font-semibold uppercase tracking-widest text-stone-500">Payment summary</h3>
@@ -128,6 +129,54 @@ export default function ServiceHistory() {
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+
+type HistoryItem = CustomerMaintenanceHistory
+
+function ServiceBreakdown({ item, description, services }: { item: HistoryItem; description?: string; services?: MaintenanceServiceResponse[] | null }) {
+  const pay = new Map(item.services.map(sv => [sv.service_id, sv.payment]))
+  const line = (key: string, name: string, desc: string | undefined, cost: string | number, payment?: { status: string; amount_paid: string | number }, badge?: React.ReactNode, struck = false) => (
+    <div key={key} className="flex flex-col gap-2 py-4 first:pt-0 sm:flex-row sm:items-start sm:justify-between">
+      <div className="min-w-0">
+        <p className="font-bold text-white">{name}</p>
+        {desc && <p className="mt-1 text-sm leading-5 text-stone-400">{desc}</p>}
+        <div className="mt-2 flex flex-wrap items-center gap-2">{badge}{payment && <span className="text-xs font-bold uppercase tracking-wider text-stone-400">{payment.status.replaceAll('_', ' ')}</span>}</div>
+      </div>
+      <div className="shrink-0 text-left sm:text-right">
+        <p className={`font-mono font-bold ${struck ? 'text-stone-500 line-through' : 'text-white'}`}>{ngn(cost)}</p>
+        {payment && <p className="mt-1 text-xs font-semibold text-stone-400">Paid {ngn(payment.amount_paid)}</p>}
+      </div>
+    </div>
+  )
+  const approvalBadge = (a: string) => <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider ${a === 'APPROVED' ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300' : a === 'REJECTED' ? 'border-red-500/50 bg-red-500/10 text-red-300' : 'border-amber-500 bg-amber-500/10 text-amber-300'}`}>{a === 'PENDING' ? 'Needs your decision' : a === 'REJECTED' ? 'Denied' : 'Approved'}</span>
+
+  // Services list unavailable: fall back to the billing list as before.
+  if (!services) return (
+    <div>
+      <h3 className="mb-4 text-xs font-bold uppercase tracking-widest text-stone-400">Work carried out</h3>
+      {item.services.length === 0 ? <p className="rounded-lg border border-white/5 bg-stone-950/50 p-4 text-sm font-semibold text-stone-400">No services have been added to this request yet.</p>
+        : <div className="divide-y divide-white/5">{item.services.map(sv => line(sv.service_id, sv.service_name, sv.description, sv.cost, sv.payment))}</div>}
+    </div>
+  )
+
+  const requested = services.filter(sv => !sv.is_additional)
+  const additional = services.filter(sv => sv.is_additional)
+  return (
+    <div className="space-y-8">
+      <section>
+        <h3 className="mb-4 inline-flex items-center gap-2 rounded-md border border-sky-500/40 bg-sky-500/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-sky-300"><Icon name="wrench" className="h-4 w-4" />Requested service</h3>
+        {description && <p className="mb-4 rounded-lg border border-white/10 bg-stone-950/60 p-4 text-sm font-semibold text-stone-200"><span className="block text-xs font-bold uppercase tracking-wider text-stone-400">Your description</span><span className="mt-1 block whitespace-pre-wrap">{description}</span></p>}
+        {requested.length === 0 ? <p className="rounded-lg border border-white/5 bg-stone-950/50 p-4 text-sm font-semibold text-stone-400">The workshop has not priced this service yet.</p>
+          : <div className="divide-y divide-white/5">{requested.map(sv => line(sv.id, sv.name, sv.description, sv.cost, pay.get(sv.id)))}</div>}
+      </section>
+      <section>
+        <h3 className="mb-4 inline-flex items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-amber-300"><Icon name="plus" className="h-4 w-4" />Additional services found at inspection</h3>
+        {additional.length === 0 ? <p className="rounded-lg border border-white/5 bg-stone-950/50 p-4 text-sm font-semibold text-stone-400">No additional services for this request.</p>
+          : <div className="divide-y divide-white/5">{additional.map(sv => line(sv.id, sv.name, sv.description, sv.cost, sv.approval === 'APPROVED' ? pay.get(sv.id) : undefined, approvalBadge(sv.approval), sv.approval === 'REJECTED'))}</div>}
+      </section>
     </div>
   )
 }

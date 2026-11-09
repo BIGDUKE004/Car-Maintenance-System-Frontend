@@ -57,3 +57,5 @@ export interface CustomerMaintenanceHistory {
   }[]
   payment_summary: { total_cost: string | number; total_paid: string | number; outstanding_balance: string | number }
 }
+
+export interface MaintenanceImage { id: string; image_url: string; category: string; uploaded_at?: string }

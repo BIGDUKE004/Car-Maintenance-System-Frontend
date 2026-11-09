@@ -3,12 +3,14 @@ import { Link } from 'react-router-dom'
 import { api } from '@/services/api'
 import { Button } from '@/components/ds/Button'
 import { Input } from '@/components/ds/Input'
+import { rememberRegistration } from '@/lib/profile'
 
 export default function Register() {
   const [form, setForm] = useState({ first_name: '', last_name: '', email: '', phone: '', password: '' })
   const [msg, setMsg] = useState('')
   const [err, setErr] = useState('')
   
+  const [busy, setBusy] = useState(false)
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setErr('')
@@ -23,10 +25,13 @@ export default function Register() {
     if (phone.length < 11 || phone.length > 14) { setErr('Phone number must contain 11 to 14 characters.'); return }
     if (form.password.length < 10) { setErr('Password must contain at least 10 characters.'); return }
     if (new TextEncoder().encode(form.password).length > 72) { setErr('Password is too long. Use no more than 72 bytes.'); return }
+    setBusy(true)
     try {
       const res = await api.register({ ...form, first_name: firstName, last_name: lastName, email: form.email.trim().toLowerCase(), phone })
+      rememberRegistration({ first_name: firstName, last_name: lastName, email: form.email.trim().toLowerCase(), phone })
       setMsg(res.message)
     } catch (e: any) { setErr(e.message || 'Registration failed') }
+    finally { setBusy(false) }
   }
 
   if (msg) return (
@@ -83,7 +88,7 @@ export default function Register() {
               <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Password</label>
               <Input type="password" value={form.password} onChange={e => { setForm({...form, password: e.target.value}); setErr('') }} required minLength={10} maxLength={72} className="bg-stone-900 border-stone-700 h-12 rounded-none focus:ring-brand" placeholder="Minimum 10 characters" />
             </div>
-            <Button type="submit" className="w-full h-14 text-lg mt-4 rounded-none uppercase tracking-wider text-sm font-bold">Create account</Button>
+            <Button type="submit" loading={busy} loadingText="Creating account…" className="w-full h-14 text-lg mt-4 rounded-none uppercase tracking-wider text-sm font-bold">Create account</Button>
           </form>
 
           <p className="mt-8 text-sm text-stone-500">

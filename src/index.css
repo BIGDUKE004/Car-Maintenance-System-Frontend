@@ -3,7 +3,10 @@
 @tailwind utilities;
 
 @layer base {
-  body { @apply bg-stone-950 text-stone-300 antialiased; font-feature-settings: "tnum" 1; }
+  body { @apply bg-stone-950 text-stone-300 antialiased font-medium; font-feature-settings: "tnum" 1; }
+  h1, h2, h3, h4 { font-weight: 700; }
+  label, th { font-weight: 700; }
+  button, a { font-weight: 600; }
   :focus-visible { @apply outline-none ring-2 ring-brand ring-offset-2 ring-offset-stone-950 rounded; }
   ::selection { background: rgba(255, 77, 0, 0.3); }
 }

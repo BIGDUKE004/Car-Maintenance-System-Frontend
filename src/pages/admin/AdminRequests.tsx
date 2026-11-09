@@ -4,11 +4,15 @@ import { Skeleton } from '@/components/ds/Skeleton'
 import { Link } from 'react-router-dom'
 import { date } from '@/lib/format'
 import { useState } from 'react'
+import { useAdminPending, adminStatusLabel } from '@/hooks/usePending'
+import { Icon } from '@/components/ds/Icon'
 
 export default function AdminRequests() {
   const [status,setStatus] = useState('')
   const { data: requests, isLoading, error } = useQuery({ queryKey: ['admin-requests',status], queryFn: () => api.adminRequests(status || undefined) })
   
+  const pendingMap = useAdminPending(requests)
+
   if (isLoading) return <Skeleton className="h-96" />
 
   return (
@@ -43,11 +47,15 @@ export default function AdminRequests() {
                   <div className="text-xs text-brand font-mono mt-1">{req.vehicle.plate_number}</div>
                 </td>
                 <td className="p-4">
-                  <span className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider border border-brand/50 text-brand rounded">{req.status.replace('_', ' ')}</span>
-                </td>
+                  {(() => {
+                    const l = adminStatusLabel(req.status, pendingMap[req.id])
+                    const cls = l.tone === 'waiting' ? 'border-amber-500 bg-amber-500/10 text-amber-300' : l.tone === 'approved' ? 'border-emerald-500 bg-emerald-500/10 text-emerald-300' : 'border-brand/60 text-brand'
+                    return <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider border rounded ${cls}`}>{l.tone === 'waiting' && <Icon name="bell" className="w-3.5 h-3.5" />}{l.tone === 'approved' && <Icon name="check" className="w-3.5 h-3.5" />}{l.text}</span>
+                  })()}
+                  </td>
                 <td className="p-4 text-sm text-stone-400">{date(req.request_date)}</td>
                 <td className="p-4 text-right">
-                  <Link to={`/admin/requests/${req.id}`} className="inline-block border border-stone-700 text-stone-300 hover:bg-brand hover:border-brand hover:text-white px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all">Workbench</Link>
+                  <Link to={`/admin/requests/${req.id}`} className="inline-block border border-stone-700 text-stone-300 hover:bg-brand hover:border-brand hover:text-white px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all inline-flex items-center gap-2"><Icon name="wrench" className="w-4 h-4" />Workbench</Link>
                 </td>
               </tr>
             ))}

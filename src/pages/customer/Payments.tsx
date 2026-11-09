@@ -56,9 +56,7 @@ export default function Payments() {
             </div>
             <div className="flex items-center gap-6">
               <div className="text-xl font-mono text-white">{ngn(srv.balance)}</div>
-              <Button onClick={() => payService(srv.service_id)} disabled={loadingId === srv.service_id}>
-                {loadingId === srv.service_id ? 'Processing...' : 'Pay Now'}
-              </Button>
+              <Button icon="credit-card" variant="success" onClick={() => payService(srv.service_id)} loading={loadingId === srv.service_id} loadingText="Redirecting…">Pay Now</Button>
             </div>
           </div>
         ))}

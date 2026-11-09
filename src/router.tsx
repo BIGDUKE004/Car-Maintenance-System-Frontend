@@ -12,6 +12,10 @@ import AddVehicle from '@/pages/customer/AddVehicle'
 import RequestService from '@/pages/customer/RequestService'
 import Payments from '@/pages/customer/Payments'
 import ServiceHistory from '@/pages/customer/ServiceHistory'
+import VehicleDetail from '@/pages/customer/VehicleDetail'
+import RequestDetail from '@/pages/customer/RequestDetail'
+import Profile from '@/pages/shared/Profile'
+import AddAdmin from '@/pages/admin/AddAdmin'
 
 import AdminDashboard from '@/pages/admin/AdminDashboard'
 import AdminRequests from '@/pages/admin/AdminRequests'
@@ -39,6 +43,7 @@ function AdminRoute() {
 
 const router = createBrowserRouter([
   { path: '/', element: <Landing /> },
+  { path: '*', element: <Navigate to="/" replace /> },
   { path: '/login', element: <Login /> },
   { path: '/register', element: <Register /> },
   { path: '/forgot-password', element: <ForgotPassword /> },
@@ -50,8 +55,11 @@ const router = createBrowserRouter([
       { path: '/dashboard', element: <Dashboard /> },
       { path: '/history', element: <ServiceHistory /> },
       { path: '/vehicles/new', element: <AddVehicle /> },
+      { path: '/vehicles/:id', element: <VehicleDetail /> },
+      { path: '/requests/:id', element: <RequestDetail /> },
       { path: '/request-service', element: <RequestService /> },
       { path: '/payments', element: <Payments /> },
+      { path: '/profile', element: <Profile /> },
     ]
   },
   {
@@ -64,6 +72,8 @@ const router = createBrowserRouter([
       { path: '/admin/vehicles', element: <AdminVehicles /> },
       { path: '/admin/payments', element: <AdminPayments /> },
       { path: '/admin/reports', element: <AdminReports /> },
+      { path: '/admin/admins/new', element: <AddAdmin /> },
+      { path: '/admin/profile', element: <Profile /> },
     ]
   }
 ])

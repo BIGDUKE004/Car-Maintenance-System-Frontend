@@ -4,23 +4,31 @@ import { api } from '@/services/api'
 import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ds/Button'
 import { Input } from '@/components/ds/Input'
+import { decodeJwt } from '@/lib/jwt'
+import { recallRegistration, saveProfile } from '@/lib/profile'
 
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [err, setErr] = useState('')
   const { reloadUser } = useAuth()
+  const [busy, setBusy] = useState(false)
   const nav = useNavigate()
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setErr('')
+    setBusy(true)
     try {
       await api.login({ email, password })
+      const payload = decodeJwt(localStorage.getItem('motora.token') || '')
+      if (payload) saveProfile(payload.sub, { email: email.trim().toLowerCase(), ...(recallRegistration(email) ?? {}) })
       await reloadUser()
-      const payload = JSON.parse(atob((localStorage.getItem('motora.token') || '').split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
-      nav(payload.role === 'WORKSHOP_ADMIN' ? '/admin' : '/dashboard')
+      const redirect = sessionStorage.getItem('motora.redirect')
+      sessionStorage.removeItem('motora.redirect')
+      nav(redirect && redirect !== '/' && redirect !== '/login' ? redirect : payload?.role === 'WORKSHOP_ADMIN' ? '/admin' : '/dashboard')
     } catch (e: any) { setErr(e.message || 'Login failed. Please check your credentials.') }
+    finally { setBusy(false) }
   }
 
   return (
@@ -59,7 +67,7 @@ export default function Login() {
               </div>
               <Input type="password" value={password} onChange={e => setPassword(e.target.value)} required className="bg-stone-900 border-stone-700 h-14 rounded-none focus:ring-brand" placeholder="••••••••" />
             </div>
-            <Button type="submit" className="w-full h-14 text-lg mt-4 rounded-none uppercase tracking-wider text-sm font-bold">Sign In</Button>
+            <Button type="submit" loading={busy} loadingText="Signing in…" className="w-full h-14 text-lg mt-4 rounded-none uppercase tracking-wider text-sm font-bold">Sign In</Button>
           </form>
 
           <p className="mt-12 text-sm text-stone-500">
