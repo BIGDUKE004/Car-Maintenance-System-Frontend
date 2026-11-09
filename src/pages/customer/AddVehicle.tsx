@@ -183,7 +183,9 @@ export default function AddVehicle() {
             />
 
             <p className="mt-2 text-xs text-stone-500">
+
               Required. JPEG, PNG or WebP.
+
             </p>
 
             {image && (
@@ -203,6 +205,7 @@ export default function AddVehicle() {
             className="w-full"
           >
             Save vehicle
+
           </Button>
         </div>
       </form>
