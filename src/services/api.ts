@@ -105,15 +105,12 @@ addCar: (body: T.CarCreate) =>
     }
   ),
   
-
   updateCar: async (carId: string, body: Partial<T.CarCreate>) => {
     const path = `/customer/cars/${encodeURIComponent(carId)}`
     try { return await req<any>(path, { method: 'PATCH', body: JSON.stringify(body) }) }
     catch (e) { if (e instanceof ApiError && e.status === 405) return req<any>(path, { method: 'PUT', body: JSON.stringify(body) }); throw e }
   },
   deleteCar: (carId: string) => req<any>(`/customer/cars/${encodeURIComponent(carId)}`, { method: 'DELETE' }),
-
-
 
   uploadCarPhoto: (carId: string, file: File) => {
   const formData = new FormData()
